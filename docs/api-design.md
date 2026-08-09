@@ -103,7 +103,7 @@ type TxOption func(*sql.TxOptions)
 func WithIsolation(level sql.IsolationLevel) TxOption
 func WithReadOnly(readOnly bool) TxOption
 
-func (tx *Tx) Exec(ctx context.Context, q Query) error
+func (tx *Tx) Exec(ctx context.Context, q Query) (sql.Result, error)
 func (tx *Tx) Query(ctx context.Context, q Query) (*sql.Rows, error)
 func (tx *Tx) QueryRow(ctx context.Context, q Query) (*sql.Row, error)
 func (tx *Tx) Nested(ctx context.Context, fn func(*Tx) error) error
@@ -199,6 +199,14 @@ func Open(ctx context.Context, dsn string, opts ...dbx.Option) (*dbx.DB, error)
 
 子包在 `init` 中注册对应驱动与方言,使用者只需导入子包,核心包保持零第三方依赖。
 
+v0.2.0 起 `dbx/sqlite` 的 `Open` 接受 sqlite 专属选项:
+
+```go
+func Open(ctx context.Context, dsn string, opts ...Option) (*dbx.DB, error)
+func WithPragma(name, value string) Option    // 连接级 PRAGMA,按顺序合并进 DSN _pragma
+func WithDBOptions(opts ...dbx.Option) Option // 透传 dbx 通用选项
+```
+
 ### 3.7 迁移
 
 ```go
@@ -254,10 +262,12 @@ type User struct {
 | `DBX_TX_BEGIN_FAILED` | 开启事务失败 |
 | `DBX_TX_COMMIT_FAILED` | 提交失败 |
 | `DBX_TX_ROLLBACK_FAILED` | 回滚失败 |
+| `DBX_DUPLICATE` | 唯一约束/重复键冲突(跨 MySQL / SQLite / PostgreSQL 统一识别) |
 | `DBX_MIGRATION_FAILED` | 迁移执行失败 |
 
 ```go
 func IsNotFound(err error) bool
+func IsDuplicate(err error) bool
 ```
 
 ## 6. 端到端示例

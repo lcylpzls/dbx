@@ -16,5 +16,6 @@ P0–P8 已全部完成,v0.1.0 定版,进入发布流程。
 | 文档 | 内容 |
 | --- | --- |
 | [../README.md](../README.md) | 快速开始与功能清单 |
+| [api-v0.2.0.md](api-v0.2.0.md) | v0.2.0 API 基线 |
 | [api-v0.1.0.md](api-v0.1.0.md) | v0.1.0 API 基线 |
 | [performance.md](performance.md) | 性能基准与分配基线 |

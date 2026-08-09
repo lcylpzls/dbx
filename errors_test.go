@@ -20,6 +20,7 @@ func TestCodesRegistered(t *testing.T) {
 		CodeTxBeginFailed:       "开启事务失败",
 		CodeTxCommitFailed:      "提交事务失败",
 		CodeTxRollbackFailed:    "回滚事务失败",
+		CodeDuplicate:           "唯一约束或重复键冲突",
 		CodeMigrationFailed:     "迁移执行失败",
 	}
 	for code, desc := range codes {
@@ -45,9 +46,35 @@ func TestIsNotFound(t *testing.T) {
 	if IsNotFound(nil) {
 		t.Error("nil 不应判定为未找到")
 	}
+	if IsDuplicate(nil) {
+		t.Error("nil 不应判定为重复键")
+	}
 	var e *errx.Error
 	if !errors.As(base, &e) {
 		t.Error("errors.As 应命中 *errx.Error")
+	}
+}
+
+func TestWrapExecErrorDuplicate(t *testing.T) {
+	patterns := []string{
+		"Duplicate entry 'a@b.com' for key 'users.email'",
+		"UNIQUE constraint failed: users.mac",
+		`ERROR: duplicate key value violates unique constraint "users_ip_key"`,
+	}
+	for _, msg := range patterns {
+		base := errors.New(msg)
+		wrapped := wrapExecError(base)
+		if !errx.Is(wrapped, CodeDuplicate) || !IsDuplicate(wrapped) ||
+			errx.KindOf(wrapped) != errx.KindConflict {
+			t.Errorf("重复键特征 %q 分类不符：%v", msg, wrapped)
+		}
+		if !errors.Is(wrapped, base) {
+			t.Errorf("应保留原始错误链：%v", wrapped)
+		}
+	}
+	plain := wrapExecError(errors.New("普通执行失败"))
+	if !errx.Is(plain, CodeExecFailed) || IsDuplicate(plain) {
+		t.Errorf("普通错误不应分类为重复键：%v", plain)
 	}
 }
 

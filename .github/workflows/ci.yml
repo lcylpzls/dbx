@@ -113,6 +113,34 @@ jobs:
           name: bench-log
           path: bench.log
 
+  apidiff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+
+      - name: Install apidiff
+        run: go install golang.org/x/exp/cmd/apidiff@latest
+
+      # 只报告 API 差异,不设硬性门禁:
+      # v0.2.0 起允许有意的破坏性变更,报告结果供评审参考。
+      - name: API diff vs v0.1.0 (informational)
+        continue-on-error: true
+        run: |
+          git worktree add /tmp/dbx-v010 v0.1.0 >/dev/null
+          (cd /tmp/dbx-v010 && apidiff -w /tmp/dbx-old.export github.com/lcylpzls/dbx)
+          apidiff -w /tmp/dbx-new.export github.com/lcylpzls/dbx
+          apidiff /tmp/dbx-old.export /tmp/dbx-new.export
+          git worktree remove /tmp/dbx-v010 --force
+
   integration:
     runs-on: ubuntu-latest
     services:

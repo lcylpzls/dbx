@@ -2,6 +2,26 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v0.2.0] - 2026-08-09
+
+### 破坏性变更
+
+- `Tx.Exec` 返回值从 `error` 改为 `(sql.Result, error)`,与 `DB.Exec` 对齐,
+  支持事务内 `RowsAffected` 条件更新/乐观锁(issue #2)。
+
+### 新增
+
+- `IsDuplicate` / `CodeDuplicate`(`errx.KindConflict`):跨 MySQL / SQLite /
+  PostgreSQL 统一识别唯一约束/重复键冲突,应用于 `Exec` / `Tx.Exec` /
+  `BatchExec`,保留原始错误链(issue #3);
+- `dbx/sqlite` 新增 `WithPragma` / `WithDBOptions` 打开选项:
+  连接级 PRAGMA 按顺序合并进 DSN `_pragma` 参数,连接池每个连接生效(issue #4);
+- CI 接入 apidiff 检查(v0.1.0 → HEAD,informational 不设门禁)。
+
+### 关闭
+
+- issue #1(`Raw()` 底层访问器):不做向下兼容窗口,能力走 dbx API。
+
 ## [v0.1.2] - 2026-08-09
 
 ### 变更

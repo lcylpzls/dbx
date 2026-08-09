@@ -88,11 +88,12 @@ func appliedVersions(ctx context.Context, db *dbx.DB) (map[string]bool, error) {
 func applyMigration(ctx context.Context, db *dbx.DB, version, content string) error {
 	if err := db.WithTx(ctx, func(tx *dbx.Tx) error {
 		for _, stmt := range splitStatements(content) {
-			if err := tx.Exec(ctx, dbx.Raw(stmt)); err != nil {
+			if _, err := tx.Exec(ctx, dbx.Raw(stmt)); err != nil {
 				return err
 			}
 		}
-		return tx.Exec(ctx, dbx.Select(`INSERT INTO schema_migrations (version) VALUES (?)`).Args(version))
+		_, err := tx.Exec(ctx, dbx.Select(`INSERT INTO schema_migrations (version) VALUES (?)`).Args(version))
+		return err
 	}); err != nil {
 		return errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed,
 			fmt.Sprintf("应用迁移 %s 失败", version))

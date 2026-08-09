@@ -183,6 +183,19 @@ func TestExecFailure(t *testing.T) {
 	}
 }
 
+func TestExecDuplicate(t *testing.T) {
+	fake.set(fakeConfig{execErr: errors.New("Duplicate entry 'x' for key 'users.email'")})
+	db, err := Open(context.Background(), "dbxtest", "x")
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	_, err = db.Exec(context.Background(), Raw(`INSERT INTO users (email) VALUES (?)`, "x"))
+	if !IsDuplicate(err) || errx.KindOf(err) != errx.KindConflict {
+		t.Errorf("重复键错误码/分类不符：%v", err)
+	}
+}
+
 func TestQuery(t *testing.T) {
 	fake.set(fakeConfig{
 		columns: []string{"id", "name"},

@@ -88,11 +88,12 @@ func runTxScenario(t *testing.T, db *dbx.DB, placeholder func(n int) string) err
 			placeholder(1), placeholder(2), placeholder(3)), id, name, age)
 	}
 	if err := db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, insert(10, "事务", 30)); err != nil {
+		if _, err := tx.Exec(ctx, insert(10, "事务", 30)); err != nil {
 			return err
 		}
 		return tx.Nested(ctx, func(child *dbx.Tx) error {
-			return child.Exec(ctx, insert(11, "嵌套", 31))
+			_, err := child.Exec(ctx, insert(11, "嵌套", 31))
+			return err
 		})
 	}); err != nil {
 		return err
@@ -101,11 +102,12 @@ func runTxScenario(t *testing.T, db *dbx.DB, placeholder func(n int) string) err
 		return err
 	}
 	err := db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, insert(12, "回滚", 32)); err != nil {
+		if _, err := tx.Exec(ctx, insert(12, "回滚", 32)); err != nil {
 			return err
 		}
 		if err := tx.Nested(ctx, func(child *dbx.Tx) error {
-			return child.Exec(ctx, insert(13, "嵌套回滚", 33))
+			_, err := child.Exec(ctx, insert(13, "嵌套回滚", 33))
+			return err
 		}); err != nil {
 			return err
 		}

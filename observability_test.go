@@ -345,7 +345,8 @@ func TestTxObservability(t *testing.T) {
 	}
 	defer db.Close()
 	if err := db.WithTx(context.Background(), func(tx *Tx) error {
-		return tx.Exec(context.Background(), Raw(`UPDATE users SET name = ?`, "x"))
+		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = ?`, "x"))
+		return err
 	}); err != nil {
 		t.Fatalf("WithTx 失败：%v", err)
 	}

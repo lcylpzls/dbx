@@ -18,7 +18,8 @@ func TestWithTxCommit(t *testing.T) {
 	}
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
-		return tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1 WHERE id = $2`, "x", 1))
+		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1 WHERE id = $2`, "x", 1))
+		return err
 	})
 	if err != nil {
 		t.Fatalf("WithTx 失败：%v", err)
@@ -127,10 +128,51 @@ func TestTxExecFailure(t *testing.T) {
 	}
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
-		return tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x"))
+		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x"))
+		return err
 	})
 	if !errx.Is(err, CodeExecFailed) {
 		t.Errorf("Tx.Exec 失败错误码不符：%v", err)
+	}
+}
+
+func TestTxExecResult(t *testing.T) {
+	fake.set(fakeConfig{affected: 3, insertID: 7})
+	db, err := Open(context.Background(), "dbxtest", "x")
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	err = db.WithTx(context.Background(), func(tx *Tx) error {
+		res, err := tx.Exec(context.Background(),
+			Raw(`UPDATE users SET name = ? WHERE id = ?`, "x", 1))
+		if err != nil {
+			return err
+		}
+		n, err := res.RowsAffected()
+		if err != nil || n != 3 {
+			return errors.New("RowsAffected 不符")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WithTx 失败：%v", err)
+	}
+}
+
+func TestTxExecDuplicate(t *testing.T) {
+	fake.set(fakeConfig{execErr: errors.New("UNIQUE constraint failed: users.mac")})
+	db, err := Open(context.Background(), "dbxtest", "x")
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	err = db.WithTx(context.Background(), func(tx *Tx) error {
+		_, err := tx.Exec(context.Background(), Raw(`INSERT INTO users (mac) VALUES (?)`, "x"))
+		return err
+	})
+	if !IsDuplicate(err) {
+		t.Errorf("事务内重复键错误码不符：%v", err)
 	}
 }
 
@@ -142,7 +184,8 @@ func TestTxExecRenderError(t *testing.T) {
 	}
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
-		return tx.Exec(context.Background(), Select(`UPDATE users SET name = ?`).OrderBy(`x; DROP`, true))
+		_, err := tx.Exec(context.Background(), Select(`UPDATE users SET name = ?`).OrderBy(`x; DROP`, true))
+		return err
 	})
 	if !errx.Is(err, CodeBadArgument) {
 		t.Errorf("Tx.Exec 构造错误码不符：%v", err)
@@ -272,11 +315,12 @@ func TestNestedCommit(t *testing.T) {
 	}
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
-		if err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x")); err != nil {
+		if _, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x")); err != nil {
 			return err
 		}
 		return tx.Nested(context.Background(), func(child *Tx) error {
-			return child.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "y"))
+			_, err := child.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "y"))
+			return err
 		})
 	})
 	if err != nil {
@@ -397,7 +441,8 @@ func TestNestedDeep(t *testing.T) {
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(inner *Tx) error {
 			return inner.Nested(context.Background(), func(leaf *Tx) error {
-				return leaf.Exec(context.Background(), Raw(`SELECT 1`))
+				_, err := leaf.Exec(context.Background(), Raw(`SELECT 1`))
+				return err
 			})
 		})
 	})
@@ -456,6 +501,19 @@ func TestBatchExecExecFailed(t *testing.T) {
 	err = db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, [][]any{{int64(1)}})
 	if !errx.Is(err, CodeExecFailed) {
 		t.Errorf("批量执行失败错误码不符：%v", err)
+	}
+}
+
+func TestBatchExecDuplicate(t *testing.T) {
+	fake.set(fakeConfig{execErr: errors.New("duplicate key value violates unique constraint")})
+	db, err := Open(context.Background(), "dbxtest", "x")
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	err = db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, [][]any{{int64(1)}})
+	if !IsDuplicate(err) {
+		t.Errorf("批量重复键错误码不符：%v", err)
 	}
 }
 

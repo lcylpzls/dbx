@@ -4,7 +4,11 @@
 // 对外错误统一使用 errx 结构化错误,错误码为 DBX_*。
 package dbx
 
-import "github.com/lcylpzls/errx"
+import (
+	"strings"
+
+	"github.com/lcylpzls/errx"
+)
 
 // 错误码定义:dbx 各失败场景的错误码。
 const (
@@ -28,6 +32,8 @@ const (
 	CodeTxCommitFailed errx.Code = "DBX_TX_COMMIT_FAILED"
 	// CodeTxRollbackFailed 回滚事务失败。
 	CodeTxRollbackFailed errx.Code = "DBX_TX_ROLLBACK_FAILED"
+	// CodeDuplicate 唯一约束/重复键冲突。
+	CodeDuplicate errx.Code = "DBX_DUPLICATE"
 	// CodeMigrationFailed 迁移执行失败。
 	CodeMigrationFailed errx.Code = "DBX_MIGRATION_FAILED"
 )
@@ -43,6 +49,7 @@ func init() {
 	errx.RegisterCode(CodeTxBeginFailed, "开启事务失败")
 	errx.RegisterCode(CodeTxCommitFailed, "提交事务失败")
 	errx.RegisterCode(CodeTxRollbackFailed, "回滚事务失败")
+	errx.RegisterCode(CodeDuplicate, "唯一约束或重复键冲突")
 	errx.RegisterCode(CodeMigrationFailed, "迁移执行失败")
 }
 
@@ -50,4 +57,28 @@ func init() {
 // 支持 errors.As / 错误链,未包装错误或 nil 返回 false。
 func IsNotFound(err error) bool {
 	return errx.Is(err, CodeNotFound)
+}
+
+// IsDuplicate 判断错误是否为唯一约束/重复键冲突(DBX_DUPLICATE)。
+// 支持错误链,未包装错误或 nil 返回 false。
+func IsDuplicate(err error) bool {
+	return errx.Is(err, CodeDuplicate)
+}
+
+// duplicatePatterns 是驱动无关的重复键错误文本特征。
+var duplicatePatterns = []string{
+	"Duplicate entry",                                // MySQL 1062
+	"UNIQUE constraint failed",                       // SQLite
+	"duplicate key value violates unique constraint", // PostgreSQL 23505
+}
+
+// wrapExecError 将执行错误分类包装:重复键冲突映射为 DBX_DUPLICATE,
+// 其余错误保持 DBX_EXEC_FAILED。
+func wrapExecError(err error) error {
+	for _, pattern := range duplicatePatterns {
+		if strings.Contains(err.Error(), pattern) {
+			return errx.Wrap(err, errx.KindConflict, CodeDuplicate, "唯一约束或重复键冲突")
+		}
+	}
+	return errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "Exec 执行失败")
 }

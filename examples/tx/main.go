@@ -32,13 +32,14 @@ func main() {
 
 	// 提交 + 嵌套保存点
 	if err := db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, dbx.Raw(
+		if _, err := tx.Exec(ctx, dbx.Raw(
 			`INSERT INTO users (id, name) VALUES (?, ?)`, int64(1), "张三")); err != nil {
 			return err
 		}
 		return tx.Nested(ctx, func(child *dbx.Tx) error {
-			return child.Exec(ctx, dbx.Raw(
+			_, err := child.Exec(ctx, dbx.Raw(
 				`INSERT INTO users (id, name) VALUES (?, ?)`, int64(2), "李四"))
+			return err
 		})
 	}); err != nil {
 		panic(err)
@@ -46,7 +47,7 @@ func main() {
 
 	// 回调返回错误 -> 整体回滚
 	_ = db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, dbx.Raw(
+		if _, err := tx.Exec(ctx, dbx.Raw(
 			`INSERT INTO users (id, name) VALUES (?, ?)`, int64(3), "王五")); err != nil {
 			return err
 		}

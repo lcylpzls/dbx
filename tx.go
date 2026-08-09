@@ -65,19 +65,19 @@ func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error, opts ...TxOption) 
 	return nil
 }
 
-// Exec 在事务内执行 SQL。
-func (tx *Tx) Exec(ctx context.Context, q Query) error {
+// Exec 在事务内执行 SQL,返回影响行数等信息。
+func (tx *Tx) Exec(ctx context.Context, q Query) (sql.Result, error) {
 	sqlText, args, err := renderQuery(q, tx.dialect)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	start := time.Now()
-	if _, err := tx.sqlTx.ExecContext(ctx, sqlText, args...); err != nil {
-		observe(tx.cfg, "exec", sqlText, args, start, err)
-		return errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "Exec 执行失败")
+	res, err := tx.sqlTx.ExecContext(ctx, sqlText, args...)
+	observe(tx.cfg, "exec", sqlText, args, start, err)
+	if err != nil {
+		return nil, wrapExecError(err)
 	}
-	observe(tx.cfg, "exec", sqlText, args, start, nil)
-	return nil
+	return res, nil
 }
 
 // Query 在事务内执行查询。
@@ -114,7 +114,7 @@ func (tx *Tx) Nested(ctx context.Context, fn func(*Tx) error) (err error) {
 	if _, err := tx.sqlTx.ExecContext(ctx, "SAVEPOINT "+name); err != nil {
 		return errx.Wrap(err, errx.KindUnavailable, CodeTxBeginFailed, "创建保存点失败")
 	}
-	child := &Tx{sqlTx: tx.sqlTx, dialect: tx.dialect, next: tx.next}
+	child := &Tx{sqlTx: tx.sqlTx, dialect: tx.dialect, cfg: tx.cfg, next: tx.next}
 	released := false
 	defer func() {
 		if !released {
@@ -173,7 +173,7 @@ func batchExec(ctx context.Context, prep preparer, cfg Config, sqlText string, a
 	for _, argSet := range args {
 		if _, err := stmt.ExecContext(ctx, argSet...); err != nil {
 			observe(cfg, "batch", sqlText, args, start, err)
-			return errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "批量执行失败")
+			return wrapExecError(err)
 		}
 	}
 	observe(cfg, "batch", sqlText, args, start, nil)

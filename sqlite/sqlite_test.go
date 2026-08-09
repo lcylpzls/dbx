@@ -87,11 +87,12 @@ func runTxScenario(t *testing.T, db *dbx.DB, placeholder func(n int) string) err
 			placeholder(1), placeholder(2), placeholder(3)), id, name, age)
 	}
 	if err := db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, insert(10, "事务", 30)); err != nil {
+		if _, err := tx.Exec(ctx, insert(10, "事务", 30)); err != nil {
 			return err
 		}
 		return tx.Nested(ctx, func(child *dbx.Tx) error {
-			return child.Exec(ctx, insert(11, "嵌套", 31))
+			_, err := child.Exec(ctx, insert(11, "嵌套", 31))
+			return err
 		})
 	}); err != nil {
 		return err
@@ -100,11 +101,12 @@ func runTxScenario(t *testing.T, db *dbx.DB, placeholder func(n int) string) err
 		return err
 	}
 	err := db.WithTx(ctx, func(tx *dbx.Tx) error {
-		if err := tx.Exec(ctx, insert(12, "回滚", 32)); err != nil {
+		if _, err := tx.Exec(ctx, insert(12, "回滚", 32)); err != nil {
 			return err
 		}
 		if err := tx.Nested(ctx, func(child *dbx.Tx) error {
-			return child.Exec(ctx, insert(13, "嵌套回滚", 33))
+			_, err := child.Exec(ctx, insert(13, "嵌套回滚", 33))
+			return err
 		}); err != nil {
 			return err
 		}
@@ -130,4 +132,48 @@ func TestOpen(t *testing.T) {
 	}
 	defer db.Close()
 	runBasic(t, db, func(n int) string { return "?" })
+}
+
+func TestMergeDSN(t *testing.T) {
+	if got := mergeDSN("app.db", nil); got != "app.db" {
+		t.Errorf("无参数应原样返回：%q", got)
+	}
+	if got := mergeDSN("app.db", []string{"_pragma=a(1)"}); got != "app.db?_pragma=a(1)" {
+		t.Errorf("无查询串合并不符：%q", got)
+	}
+	if got := mergeDSN("app.db?x=1", []string{"_pragma=a(1)"}); got != "app.db?x=1&_pragma=a(1)" {
+		t.Errorf("已有查询串合并不符：%q", got)
+	}
+}
+
+func TestWithPragma(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pragma.db")
+	db, err := Open(context.Background(), path, WithPragma("foreign_keys", "ON"))
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	row, err := db.QueryRow(context.Background(), dbx.Select(`PRAGMA foreign_keys`))
+	if err != nil {
+		t.Fatalf("QueryRow 失败：%v", err)
+	}
+	var fk int64
+	if err := row.Scan(&fk); err != nil || fk != 1 {
+		t.Errorf("foreign_keys 未生效：%d, %v", fk, err)
+	}
+}
+
+func TestWithDBOptionsAndNil(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "opts.db")
+	db, err := Open(context.Background(), path,
+		WithDBOptions(dbx.WithLogSQL(true)),
+		WithPragma("busy_timeout", "1000"),
+		nil)
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	if err := db.Ping(context.Background()); err != nil {
+		t.Fatalf("Ping 失败：%v", err)
+	}
 }

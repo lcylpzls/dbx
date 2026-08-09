@@ -151,7 +151,7 @@ func (db *DB) Exec(ctx context.Context, q Query) (sql.Result, error) {
 	res, err := db.sqlDB.ExecContext(ctx, sqlText, args...)
 	observe(db.cfg, "exec", sqlText, args, start, err)
 	if err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "Exec 执行失败")
+		return nil, wrapExecError(err)
 	}
 	return res, nil
 }
