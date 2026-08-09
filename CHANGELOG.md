@@ -1,5 +1,14 @@
 # 更新日志
 
+## [v0.2.4] - 2026-08-10
+
+### 新增
+
+- `TraceHook` 链路追踪钩子（零依赖接口 + `WithTraceHook`）：
+  Exec / Query / QueryRow 自动埋点（db.system / db.operation /
+  db.statement 属性），由 tracex 等外部适配器接入；
+- 追踪埋点测试，根包与子包覆盖率保持 100%。
+
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [v0.2.1] - 2026-08-09

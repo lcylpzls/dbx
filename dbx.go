@@ -33,6 +33,8 @@ type Config struct {
 	LogArgs bool
 	// Metrics 指标钩子,空表示关闭指标。
 	Metrics Metrics
+	// TraceHook 链路追踪钩子,空表示关闭追踪。
+	TraceHook TraceHook
 }
 
 // Option 是 Config 的修改项,在 Open / OpenConfig 时按顺序应用。
@@ -81,6 +83,11 @@ func WithLogArgs(enabled bool) Option {
 // WithMetrics 设置指标钩子。
 func WithMetrics(m Metrics) Option {
 	return func(c *Config) { c.Metrics = m }
+}
+
+// WithTraceHook 设置链路追踪钩子。
+func WithTraceHook(h TraceHook) Option {
+	return func(c *Config) { c.TraceHook = h }
 }
 
 // DB 持有 *sql.DB 与配置,是 dbx 的数据库入口。
@@ -150,8 +157,10 @@ func (db *DB) Exec(ctx context.Context, q Query) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, end := db.startTrace(ctx, "dbx.exec", "exec", sqlText)
 	start := time.Now()
 	res, err := db.sqlDB.ExecContext(ctx, sqlText, args...)
+	end(err)
 	observe(db.cfg, "exec", sqlText, args, start, err)
 	if err != nil {
 		return nil, wrapExecError(err)
@@ -165,8 +174,10 @@ func (db *DB) Query(ctx context.Context, q Query) (*sql.Rows, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, end := db.startTrace(ctx, "dbx.query", "query", sqlText)
 	start := time.Now()
 	rows, err := db.sqlDB.QueryContext(ctx, sqlText, args...)
+	end(err)
 	observe(db.cfg, "query", sqlText, args, start, err)
 	if err != nil {
 		return nil, errx.WrapCode(err, CodeQueryFailed, "查询失败")
@@ -181,10 +192,24 @@ func (db *DB) QueryRow(ctx context.Context, q Query) (*sql.Row, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, end := db.startTrace(ctx, "dbx.query_row", "query_row", sqlText)
 	start := time.Now()
 	row := db.sqlDB.QueryRowContext(ctx, sqlText, args...)
+	end(nil)
 	observe(db.cfg, "query_row", sqlText, args, start, nil)
 	return row, nil
+}
+
+// startTrace 开始链路追踪（无钩子时 no-op）。
+func (db *DB) startTrace(ctx context.Context, name, op, sqlText string) (context.Context, func(error)) {
+	if db.cfg.TraceHook == nil {
+		return ctx, func(error) {}
+	}
+	return db.cfg.TraceHook.Start(ctx, name,
+		TraceAttr{Key: "db.system", Value: db.dialect.Name()},
+		TraceAttr{Key: "db.operation", Value: op},
+		TraceAttr{Key: "db.statement", Value: sqlText},
+	)
 }
 
 // renderQuery 按数据库方言渲染查询;固定 SQL 原样返回。
