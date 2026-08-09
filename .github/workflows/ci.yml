@@ -92,6 +92,27 @@ jobs:
             (cd examples/$dir && go build ./... && go vet ./...)
           done
 
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+
+      - name: Run benchmarks (baseline only, no gate)
+        run: go test -run '^$' -bench . -benchmem -benchtime=1s . | tee bench.log
+
+      - name: Upload benchmark log
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-log
+          path: bench.log
+
   integration:
     runs-on: ubuntu-latest
     services:

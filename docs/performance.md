@@ -34,3 +34,6 @@ go test -run '^$' -bench . -benchmem -benchtime=1s .
 
 基准属于参考基线而非硬性门禁;后续性能优化应与此表对比,
 不得出现数量级回退。
+
+CI 的 `bench` job 每次运行都会输出基准日志(artifact:`bench-log`),
+只记录基线、不设硬性门禁,便于追踪分配数随版本的变化。
