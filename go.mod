@@ -6,7 +6,7 @@ require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/lcylpzls/confx v0.3.1
-	github.com/lcylpzls/errx v1.2.0
+	github.com/lcylpzls/errx v1.3.1
 	github.com/lcylpzls/logx v1.0.0
 	modernc.org/sqlite v1.56.0
 )

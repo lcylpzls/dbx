@@ -40,7 +40,7 @@ func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error, opts ...TxOption) 
 	}
 	sqlTx, err := db.sqlDB.BeginTx(ctx, txOpts)
 	if err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeTxBeginFailed, "开启事务失败")
+		return errx.WrapCode(err, CodeTxBeginFailed, "开启事务失败")
 	}
 	next := 0
 	tx := &Tx{sqlTx: sqlTx, dialect: db.dialect, cfg: db.cfg, next: &next}
@@ -54,16 +54,16 @@ func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error, opts ...TxOption) 
 	if err := fn(tx); err != nil {
 		rolledBack = true
 		if rbErr := sqlTx.Rollback(); rbErr != nil {
-			return errx.Wrap(rbErr, errx.KindUnavailable, CodeTxRollbackFailed, "回滚事务失败")
+			return errx.WrapCode(rbErr, CodeTxRollbackFailed, "回滚事务失败")
 		}
 		// 已是 errx 的错误保持原语义;普通业务错误统一包装为回调失败。
 		if _, ok := errx.As(err); ok {
 			return err
 		}
-		return errx.Wrap(err, errx.KindBusiness, CodeTxCallbackFailed, "事务回调失败,已回滚")
+		return errx.WrapCode(err, CodeTxCallbackFailed, "事务回调失败,已回滚")
 	}
 	if err := sqlTx.Commit(); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeTxCommitFailed, "提交事务失败")
+		return errx.WrapCode(err, CodeTxCommitFailed, "提交事务失败")
 	}
 	committed = true
 	return nil
@@ -94,7 +94,7 @@ func (tx *Tx) Query(ctx context.Context, q Query) (*sql.Rows, error) {
 	rows, err := tx.sqlTx.QueryContext(ctx, sqlText, args...)
 	observe(tx.cfg, "query", sqlText, args, start, err)
 	if err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "查询失败")
+		return nil, errx.WrapCode(err, CodeQueryFailed, "查询失败")
 	}
 	return rows, nil
 }
@@ -116,7 +116,7 @@ func (tx *Tx) QueryRow(ctx context.Context, q Query) (*sql.Row, error) {
 func (tx *Tx) Nested(ctx context.Context, fn func(*Tx) error) (err error) {
 	name := tx.savepointName()
 	if _, err := tx.sqlTx.ExecContext(ctx, "SAVEPOINT "+name); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeTxBeginFailed, "创建保存点失败")
+		return errx.WrapCode(err, CodeTxBeginFailed, "创建保存点失败")
 	}
 	child := &Tx{sqlTx: tx.sqlTx, dialect: tx.dialect, cfg: tx.cfg, next: tx.next}
 	released := false
@@ -128,16 +128,16 @@ func (tx *Tx) Nested(ctx context.Context, fn func(*Tx) error) (err error) {
 	}()
 	if err := fn(child); err != nil {
 		if _, rbErr := tx.sqlTx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+name); rbErr != nil {
-			return errx.Wrap(rbErr, errx.KindUnavailable, CodeTxRollbackFailed, "回滚保存点失败")
+			return errx.WrapCode(rbErr, CodeTxRollbackFailed, "回滚保存点失败")
 		}
 		if _, relErr := tx.sqlTx.ExecContext(ctx, "RELEASE SAVEPOINT "+name); relErr != nil {
-			return errx.Wrap(relErr, errx.KindUnavailable, CodeTxRollbackFailed, "释放保存点失败")
+			return errx.WrapCode(relErr, CodeTxRollbackFailed, "释放保存点失败")
 		}
 		released = true
 		return err
 	}
 	if _, relErr := tx.sqlTx.ExecContext(ctx, "RELEASE SAVEPOINT "+name); relErr != nil {
-		return errx.Wrap(relErr, errx.KindUnavailable, CodeTxRollbackFailed, "释放保存点失败")
+		return errx.WrapCode(relErr, CodeTxRollbackFailed, "释放保存点失败")
 	}
 	released = true
 	return nil
@@ -171,7 +171,7 @@ func batchExec(ctx context.Context, prep preparer, cfg Config, sqlText string, a
 	stmt, err := prep.PrepareContext(ctx, sqlText)
 	if err != nil {
 		observe(cfg, "batch", sqlText, args, start, err)
-		return errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "预编译语句失败")
+		return errx.WrapCode(err, CodeExecFailed, "预编译语句失败")
 	}
 	defer stmt.Close()
 	for _, argSet := range args {

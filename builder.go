@@ -38,7 +38,7 @@ func Select(sql string) *SelectQuery {
 		orders: make([]order, 0, 2),
 	}
 	if strings.TrimSpace(sql) == "" {
-		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "SQL 主体不能为空")
+		q.err = errx.NewCodef(CodeBadArgument, "SQL 主体不能为空")
 	}
 	return q
 }
@@ -86,7 +86,7 @@ func (q *SelectQuery) Or(cond string, args ...any) *SelectQuery {
 // In 追加 column IN (?, ?, ...) 条件。
 func (q *SelectQuery) In(column string, values ...any) *SelectQuery {
 	if len(values) == 0 {
-		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "IN 至少需要一个值")
+		q.err = errx.NewCodef(CodeBadArgument, "IN 至少需要一个值")
 		return q
 	}
 	ph := strings.TrimSuffix(strings.Repeat("?, ", len(values)), ", ")
@@ -124,7 +124,7 @@ func (q *SelectQuery) OrderBy(column string, desc bool) *SelectQuery {
 // Page 设置分页,页号从 1 开始。
 func (q *SelectQuery) Page(page, size int) *SelectQuery {
 	if page < 1 || size < 1 {
-		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "页号与每页大小必须大于 0")
+		q.err = errx.NewCodef(CodeBadArgument, "页号与每页大小必须大于 0")
 		return q
 	}
 	return q.LimitOffset(int64(size), int64((page-1)*size))
@@ -133,7 +133,7 @@ func (q *SelectQuery) Page(page, size int) *SelectQuery {
 // LimitOffset 设置 LIMIT / OFFSET,分页参数始终作为绑定参数。
 func (q *SelectQuery) LimitOffset(limit, offset int64) *SelectQuery {
 	if limit < 0 || offset < 0 {
-		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "limit/offset 不能为负数")
+		q.err = errx.NewCodef(CodeBadArgument, "limit/offset 不能为负数")
 		return q
 	}
 	q.hasLimit = true
@@ -207,7 +207,7 @@ func (q *SelectQuery) render(d Dialect) (string, []any, error) {
 // addCond 追加条件片段,并修正连接符。
 func (q *SelectQuery) addCond(connector, cond string, args []any) *SelectQuery {
 	if strings.TrimSpace(cond) == "" {
-		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "条件不能为空")
+		q.err = errx.NewCodef(CodeBadArgument, "条件不能为空")
 		return q
 	}
 	if len(q.conds) > 0 && connector == "" {

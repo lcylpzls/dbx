@@ -27,7 +27,7 @@ var identPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.]*$`)
 // quoteIdent 白名单校验标识符,并按指定引号包裹各段。
 func quoteIdent(name string, quote byte) (string, error) {
 	if !identPattern.MatchString(name) {
-		return "", errx.Newf(errx.KindInvalid, CodeBadArgument, "非法标识符 %q", name)
+		return "", errx.NewCodef(CodeBadArgument, "非法标识符 %q", name)
 	}
 	parts := strings.Split(name, ".")
 	for i, part := range parts {

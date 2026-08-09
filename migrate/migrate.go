@@ -31,7 +31,7 @@ const createVersionTableSQL = `CREATE TABLE IF NOT EXISTS schema_migrations (
 func Run(ctx context.Context, db *dbx.DB, fsys fs.FS) error {
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed, "读取迁移文件列表失败")
+		return errx.WrapCode(err, dbx.CodeMigrationFailed, "读取迁移文件列表失败")
 	}
 	var files []string
 	for _, entry := range entries {
@@ -54,7 +54,7 @@ func Run(ctx context.Context, db *dbx.DB, fsys fs.FS) error {
 		}
 		data, err := fs.ReadFile(fsys, name)
 		if err != nil {
-			return errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed, "读取迁移文件失败")
+			return errx.WrapCode(err, dbx.CodeMigrationFailed, "读取迁移文件失败")
 		}
 		if err := applyMigration(ctx, db, version, string(data)); err != nil {
 			return err
@@ -66,7 +66,7 @@ func Run(ctx context.Context, db *dbx.DB, fsys fs.FS) error {
 // ensureVersionTable 创建版本表(幂等)。
 func ensureVersionTable(ctx context.Context, db *dbx.DB) error {
 	if _, err := db.Exec(ctx, dbx.Raw(createVersionTableSQL)); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed, "创建版本表失败")
+		return errx.WrapCode(err, dbx.CodeMigrationFailed, "创建版本表失败")
 	}
 	return nil
 }
@@ -75,7 +75,7 @@ func ensureVersionTable(ctx context.Context, db *dbx.DB) error {
 func appliedVersions(ctx context.Context, db *dbx.DB) (map[string]bool, error) {
 	rows, err := dbx.List[migrationRow](ctx, db, dbx.Select(`SELECT version FROM schema_migrations`))
 	if err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed, "读取已应用版本失败")
+		return nil, errx.WrapCode(err, dbx.CodeMigrationFailed, "读取已应用版本失败")
 	}
 	applied := make(map[string]bool, len(rows))
 	for _, row := range rows {
@@ -95,7 +95,7 @@ func applyMigration(ctx context.Context, db *dbx.DB, version, content string) er
 		_, err := tx.Exec(ctx, dbx.Select(`INSERT INTO schema_migrations (version) VALUES (?)`).Args(version))
 		return err
 	}); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, dbx.CodeMigrationFailed,
+		return errx.WrapCode(err, dbx.CodeMigrationFailed,
 			fmt.Sprintf("应用迁移 %s 失败", version))
 	}
 	return nil

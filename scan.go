@@ -70,14 +70,14 @@ func scanOne[T any](rows *sql.Rows, mapper RowMapper[T]) (T, error) {
 	var zero T
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			return zero, errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "读取查询结果失败")
+			return zero, errx.WrapCode(err, CodeQueryFailed, "读取查询结果失败")
 		}
-		return zero, errx.Wrap(sql.ErrNoRows, errx.KindNotFound, CodeNotFound, "查询无结果")
+		return zero, errx.WrapCode(sql.ErrNoRows, CodeNotFound, "查询无结果")
 	}
 	if mapper != nil {
 		v, err := mapper(rows)
 		if err != nil {
-			return zero, errx.Wrap(err, errx.KindInvalid, CodeScanFailed, "自定义映射失败")
+			return zero, errx.WrapCode(err, CodeScanFailed, "自定义映射失败")
 		}
 		return v, nil
 	}
@@ -95,7 +95,7 @@ func scanList[T any](rows *sql.Rows, mapper RowMapper[T]) ([]T, error) {
 		if mapper != nil {
 			v, err := mapper(rows)
 			if err != nil {
-				return nil, errx.Wrap(err, errx.KindInvalid, CodeScanFailed, "自定义映射失败")
+				return nil, errx.WrapCode(err, CodeScanFailed, "自定义映射失败")
 			}
 			out = append(out, v)
 		} else {
@@ -107,7 +107,7 @@ func scanList[T any](rows *sql.Rows, mapper RowMapper[T]) ([]T, error) {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "读取查询结果失败")
+		return nil, errx.WrapCode(err, CodeQueryFailed, "读取查询结果失败")
 	}
 	if out == nil {
 		out = []T{}
@@ -120,15 +120,15 @@ func scanList[T any](rows *sql.Rows, mapper RowMapper[T]) ([]T, error) {
 func scanStruct(row Row, out any) error {
 	rv := reflect.ValueOf(out)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "扫描目标必须是非空指针")
+		return errx.NewCode(CodeBadArgument, "扫描目标必须是非空指针")
 	}
 	rv = rv.Elem()
 	if rv.Kind() != reflect.Struct {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "扫描目标必须是结构体")
+		return errx.NewCode(CodeBadArgument, "扫描目标必须是结构体")
 	}
 	columns, err := row.Columns()
 	if err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "读取列信息失败")
+		return errx.WrapCode(err, CodeQueryFailed, "读取列信息失败")
 	}
 	meta := scanMeta(rv.Type())
 	slots := make([]scanSlot, len(columns))
@@ -138,7 +138,7 @@ func scanStruct(row Row, out any) error {
 		dest[i] = &slots[i].value
 	}
 	if err := row.Scan(dest...); err != nil {
-		return errx.Wrap(err, errx.KindInvalid, CodeScanFailed, "扫描行数据失败")
+		return errx.WrapCode(err, CodeScanFailed, "扫描行数据失败")
 	}
 	for i, col := range columns {
 		if slots[i].field == nil {
@@ -269,7 +269,7 @@ func assignValue(field reflect.Value, v any, column string) error {
 	}
 	if sc, ok := field.Addr().Interface().(sql.Scanner); ok {
 		if err := sc.Scan(v); err != nil {
-			return errx.Newf(errx.KindInvalid, CodeScanFailed,
+			return errx.NewCodef(CodeScanFailed,
 				"列 %s 的值 %T 无法扫描到 %s：%v", column, v, field.Type(), err)
 		}
 		return nil
@@ -340,10 +340,10 @@ func assignValue(field reflect.Value, v any, column string) error {
 			}
 			return nil
 		}
-		return errx.Newf(errx.KindInvalid, CodeScanFailed,
+		return errx.NewCodef(CodeScanFailed,
 			"列 %s 不支持扫描到类型 %s", column, field.Type())
 	default:
-		return errx.Newf(errx.KindInvalid, CodeScanFailed,
+		return errx.NewCodef(CodeScanFailed,
 			"列 %s 不支持扫描到类型 %s", column, field.Type())
 	}
 	return nil
@@ -351,7 +351,7 @@ func assignValue(field reflect.Value, v any, column string) error {
 
 // scanTypeError 构造类型不匹配错误,包含列名与目标类型。
 func scanTypeError(column string, typ reflect.Type, v any) error {
-	return errx.Newf(errx.KindInvalid, CodeScanFailed,
+	return errx.NewCodef(CodeScanFailed,
 		"列 %s 的值 %T 无法扫描到 %s", column, v, typ)
 }
 

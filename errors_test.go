@@ -34,7 +34,7 @@ func TestCodesRegistered(t *testing.T) {
 }
 
 func TestIsNotFound(t *testing.T) {
-	base := errx.Newf(errx.KindInvalid, CodeNotFound, "无结果")
+	base := errx.NewCodef(CodeNotFound, "无结果")
 	if !IsNotFound(base) {
 		t.Error("DBX_NOT_FOUND 错误应判定为未找到")
 	}
@@ -42,7 +42,7 @@ func TestIsNotFound(t *testing.T) {
 	if !IsNotFound(wrapped) {
 		t.Error("错误链中的 DBX_NOT_FOUND 应判定为未找到")
 	}
-	other := errx.New(errx.KindInvalid, CodeQueryFailed, "查询失败")
+	other := errx.NewCode(CodeQueryFailed, "查询失败")
 	if IsNotFound(other) {
 		t.Error("其他错误码不应判定为未找到")
 	}
@@ -92,7 +92,7 @@ func FuzzIsNotFound(f *testing.F) {
 	f.Add("DBX_QUERY_FAILED", "查询失败")
 	f.Add("", "")
 	f.Fuzz(func(t *testing.T, code, msg string) {
-		e := errx.New(errx.KindInvalid, errx.Code(code), msg)
+		e := errx.NewCode(errx.Code(code), msg)
 		_ = IsNotFound(e)
 		_ = errx.KindOf(e)
 	})

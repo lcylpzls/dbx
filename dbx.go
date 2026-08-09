@@ -131,7 +131,7 @@ func OpenConfig(ctx context.Context, cfg Config, opts ...Option) (*DB, error) {
 // Ping 探测数据库连接是否可用。
 func (db *DB) Ping(ctx context.Context) error {
 	if err := db.sqlDB.PingContext(ctx); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeOpenFailed, "数据库连接探测失败")
+		return errx.WrapCode(err, CodeOpenFailed, "数据库连接探测失败")
 	}
 	return nil
 }
@@ -139,7 +139,7 @@ func (db *DB) Ping(ctx context.Context) error {
 // Close 关闭数据库连接池,释放全部连接。
 func (db *DB) Close() error {
 	if err := db.sqlDB.Close(); err != nil {
-		return errx.Wrap(err, errx.KindUnavailable, CodeCloseFailed, "关闭数据库连接失败")
+		return errx.WrapCode(err, CodeCloseFailed, "关闭数据库连接失败")
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func (db *DB) Query(ctx context.Context, q Query) (*sql.Rows, error) {
 	rows, err := db.sqlDB.QueryContext(ctx, sqlText, args...)
 	observe(db.cfg, "query", sqlText, args, start, err)
 	if err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "查询失败")
+		return nil, errx.WrapCode(err, CodeQueryFailed, "查询失败")
 	}
 	return rows, nil
 }
@@ -208,7 +208,7 @@ var knownDrivers = map[string]string{
 func resolveDriver(dialect string) (string, error) {
 	if driverName, ok := knownDrivers[dialect]; ok {
 		if !driverRegistered(driverName) {
-			return "", errx.Newf(errx.KindInvalid, CodeDriverNotRegistered,
+			return "", errx.NewCodef(CodeDriverNotRegistered,
 				"方言 %q 未注册,请导入对应子包", dialect)
 		}
 		return driverName, nil
@@ -218,7 +218,7 @@ func resolveDriver(dialect string) (string, error) {
 			return dialect, nil
 		}
 	}
-	return "", errx.Newf(errx.KindInvalid, CodeDriverNotRegistered, "方言 %q 未注册", dialect)
+	return "", errx.NewCodef(CodeDriverNotRegistered, "方言 %q 未注册", dialect)
 }
 
 // driverRegistered 判断驱动名是否已注册到 database/sql。
@@ -234,25 +234,25 @@ func driverRegistered(name string) bool {
 // validateConfig 校验配置参数,负数连接池参数与空驱动/DSN 均视为非法。
 func validateConfig(cfg Config) error {
 	if cfg.Driver == "" {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "驱动/方言不能为空")
+		return errx.NewCode(CodeBadArgument, "驱动/方言不能为空")
 	}
 	if cfg.DSN == "" {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "DSN 不能为空")
+		return errx.NewCode(CodeBadArgument, "DSN 不能为空")
 	}
 	if cfg.MaxOpenConns < 0 {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "MaxOpenConns 不能为负数")
+		return errx.NewCode(CodeBadArgument, "MaxOpenConns 不能为负数")
 	}
 	if cfg.MaxIdleConns < 0 {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "MaxIdleConns 不能为负数")
+		return errx.NewCode(CodeBadArgument, "MaxIdleConns 不能为负数")
 	}
 	if cfg.ConnMaxLifetime < 0 {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "ConnMaxLifetime 不能为负数")
+		return errx.NewCode(CodeBadArgument, "ConnMaxLifetime 不能为负数")
 	}
 	if cfg.ConnMaxIdleTime < 0 {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "ConnMaxIdleTime 不能为负数")
+		return errx.NewCode(CodeBadArgument, "ConnMaxIdleTime 不能为负数")
 	}
 	if cfg.SlowQueryThreshold < 0 {
-		return errx.New(errx.KindInvalid, CodeBadArgument, "SlowQueryThreshold 不能为负数")
+		return errx.NewCode(CodeBadArgument, "SlowQueryThreshold 不能为负数")
 	}
 	return nil
 }
@@ -261,7 +261,7 @@ func validateConfig(cfg Config) error {
 func open(ctx context.Context, driverName string, cfg Config) (*DB, error) {
 	sqlDB, err := sql.Open(driverName, cfg.DSN)
 	if err != nil {
-		return nil, errx.Wrap(err, errx.KindUnavailable, CodeOpenFailed, "打开数据库连接失败")
+		return nil, errx.WrapCode(err, CodeOpenFailed, "打开数据库连接失败")
 	}
 	db := &DB{sqlDB: sqlDB, cfg: cfg, dialect: dialectFor(cfg.Driver)}
 	db.applyPoolConfig()

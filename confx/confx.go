@@ -74,7 +74,7 @@ func parseDuration(s string) (time.Duration, error) {
 	}
 	d, err := time.ParseDuration(s)
 	if err != nil {
-		return 0, errx.Newf(errx.KindInvalid, dbx.CodeBadArgument, "非法时长 %q", s)
+		return 0, errx.NewCodef(dbx.CodeBadArgument, "非法时长 %q", s)
 	}
 	return d, nil
 }

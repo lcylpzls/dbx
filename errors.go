@@ -46,19 +46,33 @@ const (
 
 func init() {
 	errx.RegisterCode(CodeOpenFailed, "打开数据库连接失败")
+	errx.RegisterCodeKind(CodeOpenFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeDriverNotRegistered, "数据库驱动/方言未注册")
+	errx.RegisterCodeKind(CodeDriverNotRegistered, errx.KindInvalid)
 	errx.RegisterCode(CodeBadArgument, "参数非法")
+	errx.RegisterCodeKind(CodeBadArgument, errx.KindInvalid)
 	errx.RegisterCode(CodeExecFailed, "Exec 执行失败")
+	errx.RegisterCodeKind(CodeExecFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeQueryFailed, "查询失败")
+	errx.RegisterCodeKind(CodeQueryFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeScanFailed, "扫描或类型转换失败")
+	errx.RegisterCodeKind(CodeScanFailed, errx.KindInvalid)
 	errx.RegisterCode(CodeNotFound, "查询无结果")
+	errx.RegisterCodeKind(CodeNotFound, errx.KindNotFound)
 	errx.RegisterCode(CodeTxBeginFailed, "开启事务失败")
+	errx.RegisterCodeKind(CodeTxBeginFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeTxCommitFailed, "提交事务失败")
+	errx.RegisterCodeKind(CodeTxCommitFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeTxRollbackFailed, "回滚事务失败")
+	errx.RegisterCodeKind(CodeTxRollbackFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeTxCallbackFailed, "事务回调失败,已回滚")
+	errx.RegisterCodeKind(CodeTxCallbackFailed, errx.KindBusiness)
 	errx.RegisterCode(CodeCloseFailed, "关闭数据库连接失败")
+	errx.RegisterCodeKind(CodeCloseFailed, errx.KindUnavailable)
 	errx.RegisterCode(CodeDuplicate, "唯一约束或重复键冲突")
+	errx.RegisterCodeKind(CodeDuplicate, errx.KindConflict)
 	errx.RegisterCode(CodeMigrationFailed, "迁移执行失败")
+	errx.RegisterCodeKind(CodeMigrationFailed, errx.KindUnavailable)
 }
 
 // IsNotFound 判断错误是否为“查询无结果”。
@@ -85,8 +99,8 @@ var duplicatePatterns = []string{
 func wrapExecError(err error) error {
 	for _, pattern := range duplicatePatterns {
 		if strings.Contains(err.Error(), pattern) {
-			return errx.Wrap(err, errx.KindConflict, CodeDuplicate, "唯一约束或重复键冲突")
+			return errx.WrapCode(err, CodeDuplicate, "唯一约束或重复键冲突")
 		}
 	}
-	return errx.Wrap(err, errx.KindUnavailable, CodeExecFailed, "Exec 执行失败")
+	return errx.WrapCode(err, CodeExecFailed, "Exec 执行失败")
 }
