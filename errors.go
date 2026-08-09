@@ -5,6 +5,8 @@
 package dbx
 
 import (
+	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/lcylpzls/errx"
@@ -32,6 +34,10 @@ const (
 	CodeTxCommitFailed errx.Code = "DBX_TX_COMMIT_FAILED"
 	// CodeTxRollbackFailed 回滚事务失败。
 	CodeTxRollbackFailed errx.Code = "DBX_TX_ROLLBACK_FAILED"
+	// CodeTxCallbackFailed 事务回调失败(已回滚)。
+	CodeTxCallbackFailed errx.Code = "DBX_TX_CALLBACK_FAILED"
+	// CodeCloseFailed 关闭数据库连接失败。
+	CodeCloseFailed errx.Code = "DBX_CLOSE_FAILED"
 	// CodeDuplicate 唯一约束/重复键冲突。
 	CodeDuplicate errx.Code = "DBX_DUPLICATE"
 	// CodeMigrationFailed 迁移执行失败。
@@ -49,14 +55,16 @@ func init() {
 	errx.RegisterCode(CodeTxBeginFailed, "开启事务失败")
 	errx.RegisterCode(CodeTxCommitFailed, "提交事务失败")
 	errx.RegisterCode(CodeTxRollbackFailed, "回滚事务失败")
+	errx.RegisterCode(CodeTxCallbackFailed, "事务回调失败,已回滚")
+	errx.RegisterCode(CodeCloseFailed, "关闭数据库连接失败")
 	errx.RegisterCode(CodeDuplicate, "唯一约束或重复键冲突")
 	errx.RegisterCode(CodeMigrationFailed, "迁移执行失败")
 }
 
-// IsNotFound 判断错误是否为“查询无结果”(DBX_NOT_FOUND)。
-// 支持 errors.As / 错误链,未包装错误或 nil 返回 false。
+// IsNotFound 判断错误是否为“查询无结果”。
+// 同时识别已包装的 DBX_NOT_FOUND 与 QueryRow 原生返回的 sql.ErrNoRows。
 func IsNotFound(err error) bool {
-	return errx.Is(err, CodeNotFound)
+	return errx.Is(err, CodeNotFound) || errors.Is(err, sql.ErrNoRows)
 }
 
 // IsDuplicate 判断错误是否为唯一约束/重复键冲突(DBX_DUPLICATE)。

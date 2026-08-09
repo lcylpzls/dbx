@@ -138,7 +138,10 @@ func (db *DB) Ping(ctx context.Context) error {
 
 // Close 关闭数据库连接池,释放全部连接。
 func (db *DB) Close() error {
-	return db.sqlDB.Close()
+	if err := db.sqlDB.Close(); err != nil {
+		return errx.Wrap(err, errx.KindUnavailable, CodeCloseFailed, "关闭数据库连接失败")
+	}
+	return nil
 }
 
 // Exec 执行不返回行的 SQL,并返回影响行数等信息。

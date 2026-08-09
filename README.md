@@ -74,7 +74,8 @@ func main() {
 - 🔁 事务:`WithTx` 自动提交/回滚(panic 兜底)、隔离级别与只读、嵌套保存点、
   `Tx.Exec` 返回 `sql.Result` 支持 `RowsAffected` 条件更新、`BatchExec`;
 - 🪵 可观测:慢查询日志、SQL 打印开关、指标钩子,logx 由外部注入;
-- 🏷️ 错误:`DBX_*` 错误码,`IsNotFound` / `IsDuplicate`(跨方言重复键)判定助手;
+- 🏷️ 错误:`DBX_*` 错误码统一包装(含 Close 与事务回调),`IsNotFound` /
+  `IsDuplicate`(跨方言重复键)判定助手;
 - 🗃️ 迁移:`dbx/migrate` 版本表、embed.FS、失败回滚;`dbx/confx` TOML 配置接入。
 
 `dbx/sqlite` 支持连接级 PRAGMA 选项(`WithPragma("journal_mode", "WAL")` 等),

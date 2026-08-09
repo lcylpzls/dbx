@@ -2,6 +2,15 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v0.2.1] - 2026-08-09
+
+### 变更
+
+- 错误统一收尾:`Close` 失败包装为 `DBX_CLOSE_FAILED`;
+  `WithTx` 回调返回的普通错误包装为 `DBX_TX_CALLBACK_FAILED`
+  (`KindBusiness`,保留原始错误链,已是 errx 的错误保持原语义);
+  `IsNotFound` 同时识别 `QueryRow` 原生 `sql.ErrNoRows`。
+
 ## [v0.2.0] - 2026-08-09
 
 ### 破坏性变更

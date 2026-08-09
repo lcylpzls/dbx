@@ -56,7 +56,11 @@ func (db *DB) WithTx(ctx context.Context, fn func(*Tx) error, opts ...TxOption) 
 		if rbErr := sqlTx.Rollback(); rbErr != nil {
 			return errx.Wrap(rbErr, errx.KindUnavailable, CodeTxRollbackFailed, "回滚事务失败")
 		}
-		return err
+		// 已是 errx 的错误保持原语义;普通业务错误统一包装为回调失败。
+		if _, ok := errx.As(err); ok {
+			return err
+		}
+		return errx.Wrap(err, errx.KindBusiness, CodeTxCallbackFailed, "事务回调失败,已回滚")
 	}
 	if err := sqlTx.Commit(); err != nil {
 		return errx.Wrap(err, errx.KindUnavailable, CodeTxCommitFailed, "提交事务失败")

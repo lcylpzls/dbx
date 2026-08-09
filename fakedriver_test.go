@@ -30,6 +30,7 @@ type fakeConfig struct {
 	savepointBeginErr    error
 	savepointRollbackErr error
 	savepointReleaseErr  error
+	closeErr             error
 	columns              []string
 	rows                 [][]driver.Value
 	insertID             int64
@@ -82,7 +83,7 @@ func (c *fakeConn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *fakeConn) Close() error {
-	return nil
+	return c.cfg.closeErr
 }
 
 func (c *fakeConn) Begin() (driver.Tx, error) {

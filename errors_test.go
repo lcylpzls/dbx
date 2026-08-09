@@ -1,6 +1,7 @@
 package dbx
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
@@ -20,6 +21,8 @@ func TestCodesRegistered(t *testing.T) {
 		CodeTxBeginFailed:       "开启事务失败",
 		CodeTxCommitFailed:      "提交事务失败",
 		CodeTxRollbackFailed:    "回滚事务失败",
+		CodeTxCallbackFailed:    "事务回调失败,已回滚",
+		CodeCloseFailed:         "关闭数据库连接失败",
 		CodeDuplicate:           "唯一约束或重复键冲突",
 		CodeMigrationFailed:     "迁移执行失败",
 	}
@@ -45,6 +48,12 @@ func TestIsNotFound(t *testing.T) {
 	}
 	if IsNotFound(nil) {
 		t.Error("nil 不应判定为未找到")
+	}
+	if !IsNotFound(sql.ErrNoRows) {
+		t.Error("QueryRow 原生 sql.ErrNoRows 应判定为未找到")
+	}
+	if IsNotFound(errors.New("其他错误")) {
+		t.Error("其他错误不应判定为未找到")
 	}
 	if IsDuplicate(nil) {
 		t.Error("nil 不应判定为重复键")

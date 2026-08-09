@@ -262,6 +262,8 @@ type User struct {
 | `DBX_TX_BEGIN_FAILED` | 开启事务失败 |
 | `DBX_TX_COMMIT_FAILED` | 提交失败 |
 | `DBX_TX_ROLLBACK_FAILED` | 回滚失败 |
+| `DBX_TX_CALLBACK_FAILED` | 事务回调失败(已回滚,业务类错误统一包装) |
+| `DBX_CLOSE_FAILED` | 关闭数据库连接失败 |
 | `DBX_DUPLICATE` | 唯一约束/重复键冲突(跨 MySQL / SQLite / PostgreSQL 统一识别) |
 | `DBX_MIGRATION_FAILED` | 迁移执行失败 |
 
@@ -269,6 +271,11 @@ type User struct {
 func IsNotFound(err error) bool
 func IsDuplicate(err error) bool
 ```
+
+`IsNotFound` 同时识别已包装的 `DBX_NOT_FOUND` 与 `QueryRow` 原生返回的
+`sql.ErrNoRows`;`WithTx` 回调返回的普通错误统一包装为
+`DBX_TX_CALLBACK_FAILED`(`KindBusiness`,保留原始错误链),已是 errx 的错误
+保持原语义。
 
 ## 6. 端到端示例
 

@@ -297,3 +297,19 @@ func TestClose(t *testing.T) {
 		t.Errorf("Close 失败：%v", err)
 	}
 }
+
+func TestCloseFailed(t *testing.T) {
+	closeErr := errors.New("关闭失败")
+	fake.set(fakeConfig{closeErr: closeErr})
+	db, err := Open(context.Background(), "dbxtest", "x", WithMaxIdleConns(1))
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	err = db.Close()
+	if !errx.Is(err, CodeCloseFailed) || errx.KindOf(err) != errx.KindUnavailable {
+		t.Errorf("Close 失败错误码/分类不符：%v", err)
+	}
+	if !errors.Is(err, closeErr) {
+		t.Errorf("应保留原始关闭错误链：%v", err)
+	}
+}

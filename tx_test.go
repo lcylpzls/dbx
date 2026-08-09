@@ -73,6 +73,23 @@ func TestWithTxRollbackOnError(t *testing.T) {
 	}
 }
 
+func TestWithTxCallbackFailed(t *testing.T) {
+	fake.set(fakeConfig{})
+	db, err := Open(context.Background(), "dbxtest", "x")
+	if err != nil {
+		t.Fatalf("Open 失败：%v", err)
+	}
+	defer db.Close()
+	wantErr := errors.New("业务错误")
+	err = db.WithTx(context.Background(), func(tx *Tx) error { return wantErr })
+	if !errx.Is(err, CodeTxCallbackFailed) || errx.KindOf(err) != errx.KindBusiness {
+		t.Errorf("普通回调错误应包装为回调失败：%v", err)
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("应保留原始业务错误链：%v", err)
+	}
+}
+
 func TestWithTxRollbackFailed(t *testing.T) {
 	fake.set(fakeConfig{rollbackErr: errors.New("回滚失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
