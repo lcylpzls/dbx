@@ -1,0 +1,54 @@
+# 更新日志
+
+本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
+
+## [v0.1.0] - 2026-08-09
+
+### 规划与决策
+
+- 完成产品需求(PRD)、架构设计、API 草案、迭代计划与架构决策记录(ADR);
+- 确定定位:基于 `database/sql` 的薄数据访问层,支持 MySQL / SQLite / PostgreSQL;
+- D1–D8 全部确认(均采用推荐项),API 草案冻结为 v0.1.0 基线。
+
+### 新增
+
+- P0 项目骨架:go.mod、CI 工作流、错误码注册(DBX_*)与 `IsNotFound`;
+- P1 连接与查询执行:`DB` / `Open` / `OpenConfig`、连接池参数、`Ping` / `Close`,
+  `Raw` 查询值与 `Exec` / `Query` / `QueryRow` 三件套;
+- P2 扫描:`One[T]` / `List[T]` / `OneWith[T]` / `ListWith[T]`(包级泛型函数),
+  `db` tag、嵌入结构体、NULL 归零、字段元信息缓存与 `RowMapper`,
+  无数据统一返回 `DBX_NOT_FOUND`,`FuzzScan` 覆盖转换路径;
+- P3 动态构造:`SelectQuery`(WHERE/AND/OR、IN、LIKE、范围、IS NULL、
+  排序白名单、分页)、方言占位符转换与标识符引用,`FuzzBuilder` 保证
+  任意输入不产生可注入 SQL;同步修正签名:`Query.SQL()` 返回错误、
+  `QueryRow` 返回 `(*sql.Row, error)`、`Dialect.LimitOffset` 带起始序号;
+- P4 方言与驱动子包:`mysql` / `sqlite` / `pg` 各自导入唯一第三方驱动
+  (go-sql-driver/mysql、modernc.org/sqlite、jackc/pgx/v5 stdlib)并提供
+  `Open` 快捷入口,核心包保持零第三方驱动;CI 增加 MySQL 8.4 与
+  PostgreSQL 16 服务容器集成测试,SQLite 在进程内运行,同一套基础场景
+  在三种方言上执行;fuzz 目标扩展为 errors / scan / builder 三个;
+- P5 事务与批量:`WithTx`(自动提交/回滚,panic 兜底,隔离级别与只读选项)、
+  嵌套保存点 `Nested`(SAVEPOINT / ROLLBACK TO / RELEASE,编号递增)、
+  `BatchExec`(预编译复用);`Tx` 提供与 `DB` 相同的执行与扫描入口,
+  新增导出 `QueryRunner` 接口,`One[T]` / `List[T]` 可同时作用于 DB 与 Tx;
+- P6 可观测性:logx 对象由外部注入(`WithLogger`),包内只使用;
+  新增开关 `WithLogSQL`(打印 SQL)、`WithLogArgs`(附带参数)、
+  `WithMetrics`(指标钩子);`Exec` / `Query` / `QueryRow` / `BatchExec`
+  统一埋点:查询/错误/慢查询计数、耗时观测、慢查询日志(默认阈值 100ms,
+  SQL 截断 512 字符);事务内执行同样埋点;
+- P7 迁移与 confx 接入:`dbx/migrate` 按文件名顺序执行 `*.sql`
+  (支持多条语句拆分,跳过字符串/注释中的分号),版本表三方言兼容,
+  每个迁移文件单个事务执行、失败整体回滚、重复执行幂等;
+  `dbx/confx` 可选子包把 TOML 配置解析为 `dbx.Config`(时长字符串、
+  严格未知字段),并提供 `Open` 快捷入口;
+  `SelectQuery` 新增 `Args` 方法,支持跨方言参数化 INSERT / UPDATE;
+- P8 示例与文档:examples/basic / dynamic / tx / migrate(独立模块 +
+  replace),README 收尾,API 基线 `docs/api-v0.1.0.md`,CHANGELOG 定版。
+
+### 质量
+
+- 全模块(核心 + 5 个子包 + 示例)语句覆盖率 100%,
+  `go test -race ./...`、`go vet`、`staticcheck` 全绿;
+- fuzz:errors / scan / builder 三个目标;
+- CI:三平台 × Go 1.26,MySQL / PostgreSQL 服务容器集成测试;
+- 注:apidiff 检查在 v0.1.0 发布后接入(当前 apidiff 模块模式不可用)。
