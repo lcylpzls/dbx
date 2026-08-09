@@ -131,26 +131,31 @@ func scanStruct(row Row, out any) error {
 		return errx.Wrap(err, errx.KindUnavailable, CodeQueryFailed, "读取列信息失败")
 	}
 	meta := scanMeta(rv.Type())
-	tmp := make([]any, len(columns))
+	slots := make([]scanSlot, len(columns))
 	dest := make([]any, len(columns))
-	matched := make([]*fieldMeta, len(columns))
 	for i, col := range columns {
-		dest[i] = &tmp[i]
-		matched[i] = matchField(meta, col)
+		slots[i].field = matchField(meta, col)
+		dest[i] = &slots[i].value
 	}
 	if err := row.Scan(dest...); err != nil {
 		return errx.Wrap(err, errx.KindInvalid, CodeScanFailed, "扫描行数据失败")
 	}
 	for i, col := range columns {
-		if matched[i] == nil {
+		if slots[i].field == nil {
 			continue
 		}
-		field := fieldByIndexAlloc(rv, matched[i].index)
-		if err := assignValue(field, tmp[i], col); err != nil {
+		field := fieldByIndexAlloc(rv, slots[i].field.index)
+		if err := assignValue(field, slots[i].value, col); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// scanSlot 是单列扫描槽位,合并临时值与字段元信息以减少分配。
+type scanSlot struct {
+	field *fieldMeta
+	value any
 }
 
 // fieldMeta 描述结构体字段的扫描目标。

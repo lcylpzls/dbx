@@ -32,7 +32,11 @@ func Raw(sql string, args ...any) Query {
 // Select 以原生 SQL 为主体,安全追加 WHERE / ORDER BY / LIMIT。
 // SQL 主体必须非空;条件片段中的参数占位符统一写 "?"。
 func Select(sql string) *SelectQuery {
-	q := &SelectQuery{base: sql}
+	q := &SelectQuery{
+		base:   sql,
+		conds:  make([]condition, 0, 4),
+		orders: make([]order, 0, 2),
+	}
 	if strings.TrimSpace(sql) == "" {
 		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "SQL 主体不能为空")
 	}
@@ -45,8 +49,9 @@ type SelectQuery struct {
 	baseArgs []any
 	conds    []condition
 	orders   []order
-	limit    *int64
-	offset   *int64
+	hasLimit bool
+	limit    int64
+	offset   int64
 	err      error
 }
 
@@ -131,8 +136,9 @@ func (q *SelectQuery) LimitOffset(limit, offset int64) *SelectQuery {
 		q.err = errx.Newf(errx.KindInvalid, CodeBadArgument, "limit/offset 不能为负数")
 		return q
 	}
-	q.limit = &limit
-	q.offset = &offset
+	q.hasLimit = true
+	q.limit = limit
+	q.offset = offset
 	return q
 }
 
@@ -147,6 +153,7 @@ func (q *SelectQuery) render(d Dialect) (string, []any, error) {
 		return "", nil, q.err
 	}
 	var b strings.Builder
+	b.Grow(len(q.base) + 64)
 	b.WriteString(q.base)
 	if len(q.conds) > 0 {
 		b.WriteString(" WHERE ")
@@ -175,17 +182,26 @@ func (q *SelectQuery) render(d Dialect) (string, []any, error) {
 			}
 		}
 	}
-	args := append([]any(nil), q.baseArgs...)
+	argCap := len(q.baseArgs)
+	for _, c := range q.conds {
+		argCap += len(c.args)
+	}
+	args := make([]any, 0, argCap)
+	args = append(args, q.baseArgs...)
 	for _, c := range q.conds {
 		args = append(args, c.args...)
 	}
-	if q.limit != nil {
-		frag, fragArgs := d.LimitOffset(len(args), *q.limit, *q.offset)
+	if q.hasLimit {
+		frag, fragArgs := d.LimitOffset(len(args), q.limit, q.offset)
 		b.WriteString(" ")
 		b.WriteString(frag)
 		args = append(args, fragArgs...)
 	}
-	return convertPlaceholders(b.String(), d, len(args)), args, nil
+	sqlText := b.String()
+	if d.Placeholder(0) != "?" {
+		sqlText = convertPlaceholders(sqlText, d, len(args))
+	}
+	return sqlText, args, nil
 }
 
 // addCond 追加条件片段,并修正连接符。
