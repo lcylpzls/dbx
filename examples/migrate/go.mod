@@ -3,18 +3,18 @@ module github.com/lcylpzls/dbx/examples/migrate
 go 1.26.5
 
 require (
-	github.com/lcylpzls/clix v1.2.0
-	github.com/lcylpzls/dbx v0.0.0
+	github.com/lcylpzls/clix v1.3.0
+	github.com/lcylpzls/dbx v0.5.0
 )
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/lcylpzls/confx v0.3.3 // indirect
+	github.com/lcylpzls/confx v0.4.4 // indirect
 	github.com/lcylpzls/errx v1.4.0 // indirect
-	github.com/lcylpzls/logx v1.1.0 // indirect
-	github.com/lcylpzls/validx v1.0.2 // indirect
+	github.com/lcylpzls/logx v1.2.5 // indirect
+	github.com/lcylpzls/validx v1.1.3 // indirect
 	github.com/magiconair/properties v1.18.11 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
@@ -27,5 +27,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.56.0 // indirect
 )
-
-replace github.com/lcylpzls/dbx => ../..
