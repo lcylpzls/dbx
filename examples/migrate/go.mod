@@ -3,8 +3,8 @@ module github.com/lcylpzls/dbx/examples/migrate
 go 1.26.5
 
 require (
-	github.com/lcylpzls/clix v1.3.0
-	github.com/lcylpzls/dbx v0.5.0
+	github.com/lcylpzls/clix v1.4.0
+	github.com/lcylpzls/dbx v1.0.0
 )
 
 require (

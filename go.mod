@@ -5,11 +5,11 @@ go 1.26.5
 require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/lcylpzls/confx v0.3.1
-	github.com/lcylpzls/errx v1.4.0
-	github.com/lcylpzls/logx v1.0.0
-	github.com/lcylpzls/testx v1.2.1
-	github.com/lcylpzls/validx v1.2.0
+	github.com/lcylpzls/confx v1.0.0
+	github.com/lcylpzls/errx v1.5.4
+	github.com/lcylpzls/logx v1.3.0
+	github.com/lcylpzls/testx v1.4.1
+	github.com/lcylpzls/validx v1.2.2
 	modernc.org/sqlite v1.56.0
 )
 
