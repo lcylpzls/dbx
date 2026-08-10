@@ -120,17 +120,31 @@ func (m *fakeMetrics) key(name string, labels []string) string {
 	return name + "/" + strings.Join(labels, ",")
 }
 
-func (m *fakeMetrics) IncCounter(name string, labels ...string) {
+func (m *fakeMetrics) IncCounter(name string, labels []string) {
 	m.mu.Lock()
 	m.counters[m.key(name, labels)]++
 	m.mu.Unlock()
 }
 
-func (m *fakeMetrics) ObserveDuration(name string, seconds float64, labels ...string) {
+func (m *fakeMetrics) AddCounter(name string, delta float64, labels []string) {
+	m.mu.Lock()
+	m.counters[m.key(name, labels)] += int(delta)
+	m.mu.Unlock()
+}
+
+func (m *fakeMetrics) ObserveDuration(name string, seconds float64, labels []string) {
 	m.mu.Lock()
 	k := m.key(name, labels)
 	m.durations[k] = append(m.durations[k], seconds)
 	m.mu.Unlock()
+}
+
+func (m *fakeMetrics) AddGauge(name string, delta float64, labels []string) {}
+
+func (m *fakeMetrics) SetGauge(name string, value float64, labels []string) {}
+
+func (m *fakeMetrics) RegisterMetric(name, help string, labelNames []string) error {
+	return nil
 }
 
 func (m *fakeMetrics) counter(name string, labels ...string) int {

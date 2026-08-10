@@ -23,13 +23,13 @@ func observe(cfg Config, op, sqlText string, args any, start time.Time, err erro
 	isSlow := duration >= threshold
 
 	if cfg.Metrics != nil {
-		cfg.Metrics.IncCounter("dbx.queries", op)
-		cfg.Metrics.ObserveDuration("dbx.duration", duration.Seconds(), op)
+		cfg.Metrics.IncCounter("dbx.queries", []string{op})
+		cfg.Metrics.ObserveDuration("dbx.duration", duration.Seconds(), []string{op})
 		if err != nil {
-			cfg.Metrics.IncCounter("dbx.errors", op)
+			cfg.Metrics.IncCounter("dbx.errors", []string{op})
 		}
 		if isSlow {
-			cfg.Metrics.IncCounter("dbx.slow_queries", op)
+			cfg.Metrics.IncCounter("dbx.slow_queries", []string{op})
 		}
 	}
 	if cfg.Logger == nil {
