@@ -2,7 +2,7 @@ module github.com/lcylpzls/dbx/examples/dynamic
 
 go 1.26.5
 
-require github.com/lcylpzls/dbx v1.0.1
+require github.com/lcylpzls/dbx v1.0.2
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
