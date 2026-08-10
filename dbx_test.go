@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	testx "github.com/lcylpzls/testx"
 	"testing"
 	"time"
 
@@ -14,17 +15,15 @@ import (
 func TestRaw(t *testing.T) {
 	q := Raw(`SELECT 1`)
 	sqlText, args, err := q.SQL()
-	if err != nil {
-		t.Fatalf("Raw SQL 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if sqlText != `SELECT 1` || len(args) != 0 {
 		t.Errorf("Raw 无参数结果不符：%q %v", sqlText, args)
 	}
 	q = Raw(`SELECT $1, $2`, 1, "x")
 	sqlText, args, err = q.SQL()
-	if err != nil {
-		t.Fatalf("Raw SQL 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if sqlText != `SELECT $1, $2` || len(args) != 2 || args[0] != 1 || args[1] != "x" {
 		t.Errorf("Raw 带参数结果不符：%q %v", sqlText, args)
 	}
@@ -34,9 +33,8 @@ func TestOpenSuccess(t *testing.T) {
 	fake.set(fakeConfig{})
 	ctx := context.Background()
 	db, err := Open(ctx, "dbxtest", "test")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if err := db.Ping(ctx); err != nil {
 		t.Errorf("Ping 失败：%v", err)
@@ -46,9 +44,8 @@ func TestOpenSuccess(t *testing.T) {
 func TestOpenKnownDialect(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("Open(sqlite) 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if err := db.Close(); err != nil {
 		t.Errorf("Close 失败：%v", err)
 	}
@@ -94,9 +91,8 @@ func TestOpenConfigSuccess(t *testing.T) {
 	db, err := OpenConfig(context.Background(), Config{
 		Driver: "dbxtest", DSN: "x", MaxOpenConns: 5,
 	}, nil, WithMaxOpenConns(5))
-	if err != nil {
-		t.Fatalf("OpenConfig 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if got := db.sqlDB.Stats().MaxOpenConnections; got != 5 {
 		t.Errorf("MaxOpenConns 未生效：got %d, want 5", got)
@@ -131,9 +127,8 @@ func TestOptions(t *testing.T) {
 		WithSlowQueryThreshold(50*time.Millisecond),
 		WithLogger(nil),
 	)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if db.cfg.MaxOpenConns != 3 || db.cfg.MaxIdleConns != 1 ||
 		db.cfg.ConnMaxLifetime != time.Minute || db.cfg.ConnMaxIdleTime != 30*time.Second ||
@@ -156,14 +151,12 @@ func TestNilOption(t *testing.T) {
 func TestExec(t *testing.T) {
 	fake.set(fakeConfig{affected: 3, insertID: 7})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	res, err := db.Exec(context.Background(), Raw(`UPDATE users SET name = $1 WHERE id = $2`, "x", 1))
-	if err != nil {
-		t.Fatalf("Exec 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	affected, err := res.RowsAffected()
 	if err != nil || affected != 3 {
 		t.Errorf("RowsAffected 不符：%d, %v", affected, err)
@@ -173,9 +166,8 @@ func TestExec(t *testing.T) {
 func TestExecFailure(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("执行失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = db.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x"))
 	if !errx.Is(err, CodeExecFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -186,9 +178,8 @@ func TestExecFailure(t *testing.T) {
 func TestExecDuplicate(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("Duplicate entry 'x' for key 'users.email'")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = db.Exec(context.Background(), Raw(`INSERT INTO users (email) VALUES (?)`, "x"))
 	if !IsDuplicate(err) || errx.KindOf(err) != errx.KindConflict {
@@ -202,14 +193,12 @@ func TestQuery(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	rows, err := db.Query(context.Background(), Raw(`SELECT id, name FROM users`))
-	if err != nil {
-		t.Fatalf("Query 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer rows.Close()
 	cols, err := rows.Columns()
 	if err != nil || len(cols) != 2 {
@@ -237,9 +226,8 @@ func TestQuery(t *testing.T) {
 func TestQueryFailure(t *testing.T) {
 	fake.set(fakeConfig{queryErr: errors.New("查询失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = db.Query(context.Background(), Raw(`SELECT * FROM users`))
 	if !errx.Is(err, CodeQueryFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -253,15 +241,13 @@ func TestQueryRow(t *testing.T) {
 		rows:    [][]driver.Value{{int64(42)}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	var id int64
 	row, err := db.QueryRow(context.Background(), Raw(`SELECT id FROM users WHERE id = $1`, 42))
-	if err != nil {
-		t.Fatalf("QueryRow 构造失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if err := row.Scan(&id); err != nil {
 		t.Fatalf("QueryRow Scan 失败：%v", err)
 	}
@@ -273,15 +259,13 @@ func TestQueryRow(t *testing.T) {
 func TestQueryRowNoRows(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	var id int64
 	row, err := db.QueryRow(context.Background(), Raw(`SELECT id FROM users WHERE id = $1`, 1))
-	if err != nil {
-		t.Fatalf("QueryRow 构造失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if err := row.Scan(&id); !errors.Is(err, sql.ErrNoRows) {
 		t.Errorf("无数据应返回 sql.ErrNoRows：%v", err)
 	}
@@ -290,9 +274,8 @@ func TestQueryRowNoRows(t *testing.T) {
 func TestClose(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if err := db.Close(); err != nil {
 		t.Errorf("Close 失败：%v", err)
 	}
@@ -302,14 +285,12 @@ func TestCloseFailed(t *testing.T) {
 	closeErr := errors.New("关闭失败")
 	fake.set(fakeConfig{closeErr: closeErr})
 	db, err := Open(context.Background(), "dbxtest", "x", WithMaxIdleConns(1))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	err = db.Close()
 	if !errx.Is(err, CodeCloseFailed) || errx.KindOf(err) != errx.KindUnavailable {
 		t.Errorf("Close 失败错误码/分类不符：%v", err)
 	}
-	if !errors.Is(err, closeErr) {
-		t.Errorf("应保留原始关闭错误链：%v", err)
-	}
+	testx.ErrorIs(t, err, closeErr)
+
 }

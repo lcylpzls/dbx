@@ -3,6 +3,7 @@ package dbx
 import (
 	"context"
 	"errors"
+	testx "github.com/lcylpzls/testx"
 	"strings"
 	"sync"
 	"testing"
@@ -152,9 +153,8 @@ func TestObservabilityOptions(t *testing.T) {
 		WithLogSQL(true),
 		WithLogArgs(true),
 		WithMetrics(metrics))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if !db.cfg.LogSQL || !db.cfg.LogArgs || db.cfg.Metrics != metrics {
 		t.Errorf("可观测性选项未生效：%+v", db.cfg)
@@ -165,9 +165,8 @@ func TestLogSQL(t *testing.T) {
 	logger := &fakeLogger{}
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x", WithLogger(logger), WithLogSQL(true))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	ctx := context.Background()
 	if _, err := db.Exec(ctx, Raw(`UPDATE users SET name = ?`, "x")); err != nil {
@@ -194,9 +193,8 @@ func TestLogSQLDisabled(t *testing.T) {
 	logger := &fakeLogger{}
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x", WithLogger(logger))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if _, err := db.Exec(context.Background(), Raw(`UPDATE users SET name = ?`, "x")); err != nil {
 		t.Fatalf("Exec 失败：%v", err)
@@ -211,9 +209,8 @@ func TestLogArgs(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x",
 		WithLogger(logger), WithLogSQL(true), WithLogArgs(true))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if _, err := db.Exec(context.Background(), Raw(`UPDATE users SET name = ?`, "x")); err != nil {
 		t.Fatalf("Exec 失败：%v", err)
@@ -289,9 +286,8 @@ func TestMetricsCounters(t *testing.T) {
 	metrics := newFakeMetrics()
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x", WithMetrics(metrics))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	ctx := context.Background()
 	if _, err := db.QueryRow(ctx, Raw(`SELECT id FROM users`)); err != nil {
 		t.Fatalf("QueryRow 失败：%v", err)
@@ -309,9 +305,8 @@ func TestMetricsCounters(t *testing.T) {
 		columns:  []string{"id"},
 	})
 	db2, err := Open(context.Background(), "dbxtest", "x", WithMetrics(metrics))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db2.Close()
 	if _, err := db2.Exec(ctx, Raw(`UPDATE users SET name = ?`, "x")); err == nil {
 		t.Fatal("Exec 应失败")
@@ -340,9 +335,8 @@ func TestTxObservability(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x",
 		WithLogger(logger), WithLogSQL(true), WithMetrics(metrics))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if err := db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = ?`, "x"))

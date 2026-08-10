@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	testx "github.com/lcylpzls/testx"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -22,9 +23,8 @@ func openSQLite(t *testing.T) *dbx.DB {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "migrate-test.db")
 	db, err := sqlite.Open(context.Background(), path)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	t.Cleanup(func() { db.Close() })
 	return db
 }
@@ -42,17 +42,15 @@ func TestRunAppliesAll(t *testing.T) {
 	}
 	row, err := db.QueryRow(context.Background(),
 		dbx.Select(`SELECT name FROM users`).Where(`id = ?`, int64(1)))
-	if err != nil {
-		t.Fatalf("QueryRow 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	var name string
 	if err := row.Scan(&name); err != nil || name != "张三" {
 		t.Fatalf("迁移数据不符：%q, %v", name, err)
 	}
 	versions, err := appliedVersions(context.Background(), db)
-	if err != nil {
-		t.Fatalf("读取版本失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(versions) != 2 || !versions["001_init"] || !versions["002_seed"] {
 		t.Errorf("版本记录不符：%v", versions)
 	}
@@ -71,9 +69,8 @@ func TestRunIdempotent(t *testing.T) {
 		t.Fatalf("第二次 Run 失败：%v", err)
 	}
 	versions, err := appliedVersions(context.Background(), db)
-	if err != nil {
-		t.Fatalf("读取版本失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(versions) != 1 {
 		t.Errorf("重复执行不应重复记录：%v", versions)
 	}
@@ -94,9 +91,8 @@ func TestRunSkipsAppliedAndAppliesNew(t *testing.T) {
 		t.Fatalf("第二次 Run 失败：%v", err)
 	}
 	versions, err := appliedVersions(context.Background(), db)
-	if err != nil {
-		t.Fatalf("读取版本失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(versions) != 2 || !versions["002_more"] {
 		t.Errorf("应跳过已应用版本并应用新版本：%v", versions)
 	}
@@ -115,17 +111,15 @@ func TestRunFailureRollsBack(t *testing.T) {
 		t.Fatalf("失败迁移错误码不符：%v", err)
 	}
 	row, err := db.QueryRow(context.Background(), dbx.Select(`SELECT COUNT(*) FROM t2`))
-	if err != nil {
-		t.Fatalf("QueryRow 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	var count int64
 	if scanErr := row.Scan(&count); scanErr == nil {
 		t.Fatal("失败迁移的建表不应保留")
 	}
 	versions, err := appliedVersions(context.Background(), db)
-	if err != nil {
-		t.Fatalf("读取版本失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(versions) != 1 || !versions["001_init"] {
 		t.Errorf("失败迁移不应记录版本：%v", versions)
 	}
@@ -141,9 +135,8 @@ func TestRunEmpty(t *testing.T) {
 		t.Fatalf("空迁移 Run 失败：%v", err)
 	}
 	versions, err := appliedVersions(context.Background(), db)
-	if err != nil {
-		t.Fatalf("读取版本失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(versions) != 0 {
 		t.Errorf("空迁移不应有版本：%v", versions)
 	}
@@ -315,9 +308,8 @@ func (migFakeTx) Rollback() error { return nil }
 func openMigFake(t *testing.T) *dbx.DB {
 	t.Helper()
 	db, err := dbx.Open(context.Background(), "dbxmigratetest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	t.Cleanup(func() { db.Close() })
 	return db
 }

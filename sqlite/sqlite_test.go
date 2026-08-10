@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	testx "github.com/lcylpzls/testx"
 	"path/filepath"
 	"testing"
 
@@ -38,9 +39,8 @@ func runBasic(t *testing.T, db *dbx.DB, placeholder func(n int) string) {
 		}
 	}
 	u, err := dbx.One[user](ctx, db, dbx.Select(`SELECT id, name, age FROM dbx_test_users`).Where(`id = ?`, int64(1)))
-	if err != nil {
-		t.Fatalf("One 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if u.ID != 1 || u.Name != "张三" || u.Age != 20 {
 		t.Errorf("One 结果不符：%+v", u)
 	}
@@ -52,23 +52,20 @@ func runBasic(t *testing.T, db *dbx.DB, placeholder func(n int) string) {
 		Where(`age >= ?`, int64(20)).
 		OrderBy(`id`, true).
 		Page(1, 2))
-	if err != nil {
-		t.Fatalf("List 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(users) != 2 || users[0].ID != 3 || users[1].ID != 2 {
 		t.Errorf("List 分页/排序结果不符：%+v", users)
 	}
 	row, err := db.QueryRow(ctx, dbx.Select(`SELECT name FROM dbx_test_users`).Where(`id = ?`, int64(2)))
-	if err != nil {
-		t.Fatalf("QueryRow 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	var name string
 	if err := row.Scan(&name); err != nil {
 		t.Fatalf("QueryRow Scan 失败：%v", err)
 	}
-	if name != "李四" {
-		t.Errorf("QueryRow 结果不符：%q", name)
-	}
+	testx.Equal(t, name, "李四")
+
 	if err := runTxScenario(t, db, placeholder); err != nil {
 		t.Fatalf("事务场景失败：%v", err)
 	}
@@ -127,9 +124,8 @@ func runTxScenario(t *testing.T, db *dbx.DB, placeholder func(n int) string) err
 func TestOpen(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "dbx-test.db")
 	db, err := Open(context.Background(), path)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	runBasic(t, db, func(n int) string { return "?" })
 }
@@ -149,14 +145,12 @@ func TestMergeDSN(t *testing.T) {
 func TestWithPragma(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "pragma.db")
 	db, err := Open(context.Background(), path, WithPragma("foreign_keys", "ON"))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	row, err := db.QueryRow(context.Background(), dbx.Select(`PRAGMA foreign_keys`))
-	if err != nil {
-		t.Fatalf("QueryRow 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	var fk int64
 	if err := row.Scan(&fk); err != nil || fk != 1 {
 		t.Errorf("foreign_keys 未生效：%d, %v", fk, err)
@@ -169,9 +163,8 @@ func TestWithDBOptionsAndNil(t *testing.T) {
 		WithDBOptions(dbx.WithLogSQL(true)),
 		WithPragma("busy_timeout", "1000"),
 		nil)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if err := db.Ping(context.Background()); err != nil {
 		t.Fatalf("Ping 失败：%v", err)

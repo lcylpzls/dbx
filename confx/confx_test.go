@@ -2,6 +2,7 @@ package confx
 
 import (
 	"context"
+	testx "github.com/lcylpzls/testx"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,9 +37,8 @@ func writeTOML(t *testing.T, content string) string {
 
 func TestLoadFile(t *testing.T) {
 	cfg, err := LoadFile(writeTOML(t, validTOML))
-	if err != nil {
-		t.Fatalf("LoadFile 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if cfg.Driver != "sqlite" || cfg.DSN != "test.db" ||
 		cfg.MaxOpenConns != 5 || cfg.MaxIdleConns != 2 ||
 		cfg.ConnMaxLifetime != 30*time.Second ||
@@ -52,9 +52,8 @@ func TestLoadFile(t *testing.T) {
 func TestLoadFileMissingDuration(t *testing.T) {
 	cfg, err := LoadFile(writeTOML(t, `driver = "sqlite"
 dsn = "test.db"`))
-	if err != nil {
-		t.Fatalf("LoadFile 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if cfg.ConnMaxLifetime != 0 || cfg.ConnMaxIdleTime != 0 || cfg.SlowQueryThreshold != 0 {
 		t.Errorf("缺失时长应为 0：%+v", cfg)
 	}
@@ -71,9 +70,8 @@ unknown = 1`))
 
 func TestLoadFileMissingFile(t *testing.T) {
 	_, err := LoadFile(filepath.Join(t.TempDir(), "不存在.toml"))
-	if err == nil {
-		t.Fatal("缺失文件应返回错误")
-	}
+	testx.RequireError(t, err)
+
 }
 
 func TestLoadFileInvalidDuration(t *testing.T) {
@@ -97,9 +95,8 @@ func TestOpen(t *testing.T) {
 	path := writeTOML(t, `driver = "sqlite"
 dsn = "`+dsn+`"`)
 	db, err := Open(context.Background(), path)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if err := db.Ping(context.Background()); err != nil {
 		t.Fatalf("Ping 失败：%v", err)

@@ -3,6 +3,7 @@ package dbx
 import (
 	"context"
 	"database/sql/driver"
+	testx "github.com/lcylpzls/testx"
 	"testing"
 )
 
@@ -56,9 +57,8 @@ func BenchmarkOne_Scan5Fields(b *testing.B) {
 		rows:    [][]driver.Value{{int64(1), "张三", int64(20), float64(9.5), true}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		b.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(b, err)
+
 	defer db.Close()
 	ctx := context.Background()
 	q := Raw(`SELECT id, name, age, score, active FROM users WHERE id = ?`, int64(1))
@@ -89,9 +89,8 @@ func benchmarkList(b *testing.B, n int) {
 		rows:    rows,
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		b.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(b, err)
+
 	defer db.Close()
 	ctx := context.Background()
 	q := Raw(`SELECT id, name, age, score, active FROM users`)
@@ -99,9 +98,8 @@ func benchmarkList(b *testing.B, n int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		users, err := List[benchUser](ctx, db, q)
-		if err != nil {
-			b.Fatal(err)
-		}
+		testx.RequireNoError(b, err)
+
 		if len(users) != n {
 			b.Fatalf("行数不符：%d", len(users))
 		}

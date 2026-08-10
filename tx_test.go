@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	testx "github.com/lcylpzls/testx"
 	"testing"
 
 	"github.com/lcylpzls/errx"
@@ -13,33 +14,29 @@ import (
 func TestWithTxCommit(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1 WHERE id = $2`, "x", 1))
 		return err
 	})
-	if err != nil {
-		t.Fatalf("WithTx 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestWithTxOptions(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return nil },
 		WithIsolation(sql.LevelSerializable),
 		WithReadOnly(true),
 		nil)
-	if err != nil {
-		t.Fatalf("WithTx 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	opts := fake.lastTxOptions()
 	if opts.Isolation != sql.LevelSerializable || !opts.ReadOnly {
 		t.Errorf("事务选项未生效：%+v", opts)
@@ -49,9 +46,8 @@ func TestWithTxOptions(t *testing.T) {
 func TestWithTxBeginFailed(t *testing.T) {
 	fake.set(fakeConfig{beginTxErr: errors.New("开启失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return nil })
 	if !errx.Is(err, CodeTxBeginFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -62,40 +58,35 @@ func TestWithTxBeginFailed(t *testing.T) {
 func TestWithTxRollbackOnError(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	wantErr := errors.New("业务错误")
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return wantErr })
-	if !errors.Is(err, wantErr) {
-		t.Errorf("应返回原始错误：%v", err)
-	}
+	testx.ErrorIs(t, err, wantErr)
+
 }
 
 func TestWithTxCallbackFailed(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	wantErr := errors.New("业务错误")
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return wantErr })
 	if !errx.Is(err, CodeTxCallbackFailed) || errx.KindOf(err) != errx.KindBusiness {
 		t.Errorf("普通回调错误应包装为回调失败：%v", err)
 	}
-	if !errors.Is(err, wantErr) {
-		t.Errorf("应保留原始业务错误链：%v", err)
-	}
+	testx.ErrorIs(t, err, wantErr)
+
 }
 
 func TestWithTxRollbackFailed(t *testing.T) {
 	fake.set(fakeConfig{rollbackErr: errors.New("回滚失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return errors.New("业务错误") })
 	if !errx.Is(err, CodeTxRollbackFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -106,9 +97,8 @@ func TestWithTxRollbackFailed(t *testing.T) {
 func TestWithTxCommitFailed(t *testing.T) {
 	fake.set(fakeConfig{commitErr: errors.New("提交失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error { return nil })
 	if !errx.Is(err, CodeTxCommitFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -119,9 +109,8 @@ func TestWithTxCommitFailed(t *testing.T) {
 func TestWithTxPanic(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	panicked := false
 	func() {
@@ -132,17 +121,15 @@ func TestWithTxPanic(t *testing.T) {
 		}()
 		_ = db.WithTx(context.Background(), func(tx *Tx) error { panic("boom") })
 	}()
-	if !panicked {
-		t.Fatal("回调 panic 应重新抛出")
-	}
+	testx.RequireTrue(t, panicked)
+
 }
 
 func TestTxExecFailure(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("执行失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x"))
@@ -156,9 +143,8 @@ func TestTxExecFailure(t *testing.T) {
 func TestTxExecResult(t *testing.T) {
 	fake.set(fakeConfig{affected: 3, insertID: 7})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		res, err := tx.Exec(context.Background(),
@@ -172,17 +158,15 @@ func TestTxExecResult(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("WithTx 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestTxExecDuplicate(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("UNIQUE constraint failed: users.mac")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Exec(context.Background(), Raw(`INSERT INTO users (mac) VALUES (?)`, "x"))
@@ -196,9 +180,8 @@ func TestTxExecDuplicate(t *testing.T) {
 func TestTxExecRenderError(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Exec(context.Background(), Select(`UPDATE users SET name = ?`).OrderBy(`x; DROP`, true))
@@ -215,9 +198,8 @@ func TestTxQueryAndQueryRow(t *testing.T) {
 		rows:    [][]driver.Value{{int64(7)}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		rows, err := tx.Query(context.Background(), Raw(`SELECT id FROM users`))
@@ -239,17 +221,15 @@ func TestTxQueryAndQueryRow(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("WithTx 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestTxQueryFailure(t *testing.T) {
 	fake.set(fakeConfig{queryErr: errors.New("查询失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		_, err := tx.Query(context.Background(), Raw(`SELECT id FROM users`))
@@ -263,9 +243,8 @@ func TestTxQueryFailure(t *testing.T) {
 func TestTxQueryRenderError(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		rows, err := tx.Query(context.Background(), Select(`SELECT 1`).OrderBy(`x; DROP`, true))
@@ -282,9 +261,8 @@ func TestTxQueryRenderError(t *testing.T) {
 func TestTxQueryRowRenderError(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		row, err := tx.QueryRow(context.Background(), Select(`SELECT 1`).OrderBy(`x; DROP`, true))
@@ -304,9 +282,8 @@ func TestTxOneList(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}, {int64(2), "李四"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		u, err := One[scanUser](context.Background(), tx, Raw(`SELECT id, name FROM users WHERE id = $1`, 1))
@@ -319,17 +296,15 @@ func TestTxOneList(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("WithTx 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestNestedCommit(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		if _, err := tx.Exec(context.Background(), Raw(`UPDATE users SET name = $1`, "x")); err != nil {
@@ -340,17 +315,15 @@ func TestNestedCommit(t *testing.T) {
 			return err
 		})
 	})
-	if err != nil {
-		t.Fatalf("嵌套事务失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestNestedRollback(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	wantErr := errors.New("内层错误")
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
@@ -360,17 +333,15 @@ func TestNestedRollback(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("外层事务应正常提交：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestNestedBeginFailed(t *testing.T) {
 	fake.set(fakeConfig{savepointBeginErr: errors.New("保存点失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(child *Tx) error { return nil })
@@ -383,9 +354,8 @@ func TestNestedBeginFailed(t *testing.T) {
 func TestNestedRollbackToFailed(t *testing.T) {
 	fake.set(fakeConfig{savepointRollbackErr: errors.New("回滚保存点失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(child *Tx) error { return errors.New("内层错误") })
@@ -398,9 +368,8 @@ func TestNestedRollbackToFailed(t *testing.T) {
 func TestNestedReleaseAfterRollbackFailed(t *testing.T) {
 	fake.set(fakeConfig{savepointReleaseErr: errors.New("释放保存点失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(child *Tx) error { return errors.New("内层错误") })
@@ -413,9 +382,8 @@ func TestNestedReleaseAfterRollbackFailed(t *testing.T) {
 func TestNestedReleaseFailed(t *testing.T) {
 	fake.set(fakeConfig{savepointReleaseErr: errors.New("释放保存点失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(child *Tx) error { return nil })
@@ -428,9 +396,8 @@ func TestNestedReleaseFailed(t *testing.T) {
 func TestNestedPanic(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	panicked := false
 	func() {
@@ -443,17 +410,15 @@ func TestNestedPanic(t *testing.T) {
 			return tx.Nested(context.Background(), func(child *Tx) error { panic("boom") })
 		})
 	}()
-	if !panicked {
-		t.Fatal("嵌套回调 panic 应重新抛出")
-	}
+	testx.RequireTrue(t, panicked)
+
 }
 
 func TestNestedDeep(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.Nested(context.Background(), func(inner *Tx) error {
@@ -463,32 +428,28 @@ func TestNestedDeep(t *testing.T) {
 			})
 		})
 	})
-	if err != nil {
-		t.Fatalf("多层嵌套事务失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestBatchExecDB(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.BatchExec(context.Background(),
 		`INSERT INTO users (id, name) VALUES (?, ?)`,
 		[][]any{{int64(1), "a"}, {int64(2), "b"}})
-	if err != nil {
-		t.Fatalf("BatchExec 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }
 
 func TestBatchExecEmpty(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if err := db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, nil); err != nil {
 		t.Fatalf("空参数 BatchExec 失败：%v", err)
@@ -498,9 +459,8 @@ func TestBatchExecEmpty(t *testing.T) {
 func TestBatchExecPrepareFailed(t *testing.T) {
 	fake.set(fakeConfig{prepareErr: errors.New("预编译失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, [][]any{{int64(1)}})
 	if !errx.Is(err, CodeExecFailed) {
@@ -511,9 +471,8 @@ func TestBatchExecPrepareFailed(t *testing.T) {
 func TestBatchExecExecFailed(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("执行失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, [][]any{{int64(1)}})
 	if !errx.Is(err, CodeExecFailed) {
@@ -524,9 +483,8 @@ func TestBatchExecExecFailed(t *testing.T) {
 func TestBatchExecDuplicate(t *testing.T) {
 	fake.set(fakeConfig{execErr: errors.New("duplicate key value violates unique constraint")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.BatchExec(context.Background(), `INSERT INTO users (id) VALUES (?)`, [][]any{{int64(1)}})
 	if !IsDuplicate(err) {
@@ -537,16 +495,14 @@ func TestBatchExecDuplicate(t *testing.T) {
 func TestBatchExecTx(t *testing.T) {
 	fake.set(fakeConfig{})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	err = db.WithTx(context.Background(), func(tx *Tx) error {
 		return tx.BatchExec(context.Background(),
 			`INSERT INTO users (id, name) VALUES (?, ?)`,
 			[][]any{{int64(1), "a"}})
 	})
-	if err != nil {
-		t.Fatalf("事务内 BatchExec 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 }

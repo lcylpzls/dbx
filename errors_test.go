@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	testx "github.com/lcylpzls/testx"
 	"testing"
 
 	"github.com/lcylpzls/errx"
@@ -77,9 +78,8 @@ func TestWrapExecErrorDuplicate(t *testing.T) {
 			errx.KindOf(wrapped) != errx.KindConflict {
 			t.Errorf("重复键特征 %q 分类不符：%v", msg, wrapped)
 		}
-		if !errors.Is(wrapped, base) {
-			t.Errorf("应保留原始错误链：%v", wrapped)
-		}
+		testx.ErrorIs(t, wrapped, base)
+
 	}
 	plain := wrapExecError(errors.New("普通执行失败"))
 	if !errx.Is(plain, CodeExecFailed) || IsDuplicate(plain) {

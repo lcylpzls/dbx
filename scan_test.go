@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"strings"
 	"testing"
@@ -302,9 +303,8 @@ func TestAssignValue(t *testing.T) {
 				}
 				return
 			}
-			if err != nil {
-				t.Fatalf("assignValue 失败：%v", err)
-			}
+			testx.RequireNoError(t, err)
+
 			if got := reflect.ValueOf(tc.field).Elem().Interface(); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("赋值结果不符：got %#v, want %#v", got, tc.want)
 			}
@@ -339,14 +339,12 @@ func TestOne(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	u, err := One[scanUser](context.Background(), db, Raw(`SELECT id, name FROM users WHERE id = $1`, 1))
-	if err != nil {
-		t.Fatalf("One 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if u.ID != 1 || u.Name != "张三" {
 		t.Errorf("One 结果不符：%+v", u)
 	}
@@ -355,25 +353,22 @@ func TestOne(t *testing.T) {
 func TestOneNotFound(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = One[scanUser](context.Background(), db, Raw(`SELECT id FROM users WHERE id = $1`, 1))
 	if !errx.Is(err, CodeNotFound) || !IsNotFound(err) || errx.KindOf(err) != errx.KindNotFound {
 		t.Errorf("无数据错误码/分类不符：%v", err)
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		t.Errorf("应保留 sql.ErrNoRows 错误链：%v", err)
-	}
+	testx.ErrorIs(t, err, sql.ErrNoRows)
+
 }
 
 func TestOneQueryFailure(t *testing.T) {
 	fake.set(fakeConfig{queryErr: errors.New("查询失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = One[scanUser](context.Background(), db, Raw(`SELECT id FROM users`))
 	if !errx.Is(err, CodeQueryFailed) {
@@ -384,9 +379,8 @@ func TestOneQueryFailure(t *testing.T) {
 func TestOneRowsError(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}, rowsErr: errors.New("迭代失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = One[scanUser](context.Background(), db, Raw(`SELECT id FROM users`))
 	if !errx.Is(err, CodeQueryFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -400,9 +394,8 @@ func TestOneTypeMismatch(t *testing.T) {
 		rows:    [][]driver.Value{{"abc"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = One[scanUser](context.Background(), db, Raw(`SELECT age FROM users`))
 	if !errx.Is(err, CodeScanFailed) || !strings.Contains(err.Error(), "age") {
@@ -416,14 +409,12 @@ func TestList(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}, {int64(2), "李四"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	users, err := List[scanUser](context.Background(), db, Raw(`SELECT id, name FROM users`))
-	if err != nil {
-		t.Fatalf("List 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(users) != 2 || users[0].ID != 1 || users[1].Name != "李四" {
 		t.Errorf("List 结果不符：%+v", users)
 	}
@@ -432,14 +423,12 @@ func TestList(t *testing.T) {
 func TestListEmpty(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	users, err := List[scanUser](context.Background(), db, Raw(`SELECT id FROM users`))
-	if err != nil {
-		t.Fatalf("List 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if users == nil || len(users) != 0 {
 		t.Errorf("空结果应返回非 nil 空切片：%#v", users)
 	}
@@ -448,9 +437,8 @@ func TestListEmpty(t *testing.T) {
 func TestListQueryFailure(t *testing.T) {
 	fake.set(fakeConfig{queryErr: errors.New("查询失败")})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = List[scanUser](context.Background(), db, Raw(`SELECT id FROM users`))
 	if !errx.Is(err, CodeQueryFailed) {
@@ -465,9 +453,8 @@ func TestListRowsError(t *testing.T) {
 		rowsErr: errors.New("迭代失败"),
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = List[scanUser](context.Background(), db, Raw(`SELECT id FROM users`))
 	if !errx.Is(err, CodeQueryFailed) || errx.KindOf(err) != errx.KindUnavailable {
@@ -481,9 +468,8 @@ func TestListTypeMismatch(t *testing.T) {
 		rows:    [][]driver.Value{{"yes"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = List[scanUser](context.Background(), db, Raw(`SELECT active FROM users`))
 	if !errx.Is(err, CodeScanFailed) {
@@ -497,14 +483,12 @@ func TestOneWith(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	m, err := OneWith[mappedUser](context.Background(), db, Raw(`SELECT id, name FROM users`), scanMapper)
-	if err != nil {
-		t.Fatalf("OneWith 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if m.ID != 1 || m.Name != "张三" {
 		t.Errorf("OneWith 结果不符：%+v", m)
 	}
@@ -513,9 +497,8 @@ func TestOneWith(t *testing.T) {
 func TestOneWithNotFound(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	_, err = OneWith[mappedUser](context.Background(), db, Raw(`SELECT id FROM users`), scanMapper)
 	if !IsNotFound(err) {
@@ -529,9 +512,8 @@ func TestOneWithMapperError(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1)}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	bad := func(row Row) (mappedUser, error) {
 		return mappedUser{}, errors.New("映射失败")
@@ -548,14 +530,12 @@ func TestListWith(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1), "张三"}, {int64(2), "李四"}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	list, err := ListWith[mappedUser](context.Background(), db, Raw(`SELECT id, name FROM users`), scanMapper)
-	if err != nil {
-		t.Fatalf("ListWith 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if len(list) != 2 || list[1].Name != "李四" {
 		t.Errorf("ListWith 结果不符：%+v", list)
 	}
@@ -564,14 +544,12 @@ func TestListWith(t *testing.T) {
 func TestListWithEmpty(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	list, err := ListWith[mappedUser](context.Background(), db, Raw(`SELECT id FROM users`), scanMapper)
-	if err != nil {
-		t.Fatalf("ListWith 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if list == nil || len(list) != 0 {
 		t.Errorf("空结果应返回非 nil 空切片：%#v", list)
 	}
@@ -583,9 +561,8 @@ func TestListWithMapperError(t *testing.T) {
 		rows:    [][]driver.Value{{int64(1)}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	bad := func(row Row) (mappedUser, error) {
 		return mappedUser{}, errors.New("映射失败")

@@ -2,6 +2,7 @@ package dbx
 
 import (
 	"context"
+	testx "github.com/lcylpzls/testx"
 	"sync"
 	"testing"
 )
@@ -48,9 +49,8 @@ func TestTraceHook(t *testing.T) {
 	fake.set(fakeConfig{})
 	hook := &fakeTraceHook{}
 	db, err := Open(context.Background(), "dbxtest", "test", WithTraceHook(hook))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 
 	_, _ = db.Exec(context.Background(), Raw("INSERT INTO t VALUES(1)"))
@@ -67,9 +67,8 @@ func TestTraceHook(t *testing.T) {
 		{"dbx.query_row", "query_row"},
 	}
 	for i, w := range want {
-		if calls[i].name != w.name {
-			t.Fatalf("第 %d 次 span 名不符：%s != %s", i, calls[i].name, w.name)
-		}
+		testx.RequireEqual(t, calls[i].name, w.name)
+
 		if calls[i].attrs["db.operation"] != w.op || calls[i].attrs["db.system"] == "" ||
 			calls[i].attrs["db.statement"] == "" {
 			t.Fatalf("第 %d 次属性不符：%+v", i, calls[i].attrs)

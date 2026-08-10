@@ -3,6 +3,7 @@ package dbx
 import (
 	"context"
 	"database/sql/driver"
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"strings"
 	"testing"
@@ -144,17 +145,15 @@ func TestSelectPostgresPlaceholders(t *testing.T) {
 
 func TestConvertPlaceholdersRemaining(t *testing.T) {
 	got := convertPlaceholders("a = ? AND b = ?", pgDialect{}, 1)
-	if got != "a = $1 AND b = ?" {
-		t.Errorf("占位符转换不符：%q", got)
-	}
+	testx.Equal(t, got, "a = $1 AND b = ?")
+
 }
 
 func TestDBRenderSelectQuery(t *testing.T) {
 	fake.set(fakeConfig{columns: []string{"id"}})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	if _, err := db.Query(context.Background(), Select(`SELECT id FROM users`).Where(`id = ?`, 1)); err != nil {
 		t.Errorf("Query 渲染失败：%v", err)
@@ -166,9 +165,8 @@ func TestDBRenderSelectQuery(t *testing.T) {
 
 func TestDBRenderError(t *testing.T) {
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	bad := Select(`SELECT 1`).OrderBy(`x; DROP`, true)
 	if _, err := db.Exec(context.Background(), bad); !errx.Is(err, CodeBadArgument) {
@@ -188,14 +186,12 @@ func TestDBQueryRowSelect(t *testing.T) {
 		rows:    [][]driver.Value{{int64(7)}},
 	})
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	defer db.Close()
 	row, err := db.QueryRow(context.Background(), Select(`SELECT id FROM users`).Where(`id = ?`, 7))
-	if err != nil {
-		t.Fatalf("QueryRow 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	var id int64
 	if err := row.Scan(&id); err != nil || id != 7 {
 		t.Errorf("QueryRow 结果不符：%d, %v", id, err)
