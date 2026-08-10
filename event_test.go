@@ -6,44 +6,35 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/lcylpzls/testx"
 )
 
 func TestEventHook(t *testing.T) {
 	hook := &fakeQueryEventHook{}
 	db, err := Open(context.Background(), "dbxtest", "x", WithEventHook(hook))
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
 	defer db.Close()
 
-	if _, err := db.Exec(context.Background(), Raw("INSERT INTO t (v) VALUES (1)")); err != nil {
-		t.Fatalf("Exec 失败：%v", err)
-	}
-	if _, err := db.Query(context.Background(), Raw("SELECT v FROM t")); err != nil {
-		t.Fatalf("Query 失败：%v", err)
-	}
+	_, err = db.Exec(context.Background(), Raw("INSERT INTO t (v) VALUES (1)"))
+	testx.RequireNoError(t, err)
+	_, err = db.Query(context.Background(), Raw("SELECT v FROM t"))
+	testx.RequireNoError(t, err)
 	_, _ = db.QueryRow(context.Background(), Raw("SELECT v FROM t"))
 	fake.set(fakeConfig{execErr: errors.New("执行失败")})
 	defer fake.set(fakeConfig{})
 	_, _ = db.Exec(context.Background(), Raw("INSERT INTO t (v) VALUES (2)"))
 
 	events := hook.snapshot()
-	if len(events) != 4 {
-		t.Fatalf("期望 4 个事件，得到 %d：%+v", len(events), events)
-	}
+	testx.RequireLen(t, events, 4)
 	var ops []string
 	for _, e := range events {
 		ops = append(ops, e.Operation)
 	}
-	if strings.Join(ops, ",") != "exec,query,query_row,exec" {
-		t.Fatalf("操作序列不匹配：%v", ops)
-	}
-	if events[0].System == "" || events[0].Statement == "" {
-		t.Fatalf("事件应携带 system 与 statement：%+v", events[0])
-	}
-	if events[3].Err == nil {
-		t.Fatal("失败事件应携带错误")
-	}
+	testx.RequireEqual(t, strings.Join(ops, ","), "exec,query,query_row,exec")
+	testx.RequireNotEmpty(t, events[0].System)
+	testx.RequireNotEmpty(t, events[0].Statement)
+	testx.RequireNotNil(t, events[3].Err)
 }
 
 func TestEventHookWithTrace(t *testing.T) {
@@ -53,24 +44,16 @@ func TestEventHookWithTrace(t *testing.T) {
 		WithTraceHook(trace),
 		WithEventHook(hook),
 	)
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
 	defer db.Close()
 	_, _ = db.Exec(context.Background(), Raw("SELECT 1"))
-	if len(hook.snapshot()) != 1 {
-		t.Fatal("事件钩子应触发")
-	}
-	if len(trace.snapshot()) != 1 {
-		t.Fatal("追踪钩子应触发")
-	}
+	testx.RequireLen(t, hook.snapshot(), 1)
+	testx.RequireLen(t, trace.snapshot(), 1)
 }
 
 func TestNoEventHook(t *testing.T) {
 	db, err := Open(context.Background(), "dbxtest", "x")
-	if err != nil {
-		t.Fatalf("Open 失败：%v", err)
-	}
+	testx.RequireNoError(t, err)
 	defer db.Close()
 	_, _ = db.Exec(context.Background(), Raw("SELECT 1"))
 }
@@ -91,5 +74,3 @@ func (h *fakeQueryEventHook) snapshot() []QueryEvent {
 	defer h.mu.Unlock()
 	return append([]QueryEvent(nil), h.list...)
 }
-
-var _ = errors.New

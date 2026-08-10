@@ -1,10 +1,9 @@
 package dbx
 
 import (
-	"reflect"
 	"testing"
 
-	"github.com/lcylpzls/errx"
+	"github.com/lcylpzls/testx"
 )
 
 func TestDialectName(t *testing.T) {
@@ -18,21 +17,17 @@ func TestDialectName(t *testing.T) {
 		{genericDialect{}, "generic"},
 	}
 	for _, tc := range cases {
-		if got := tc.d.Name(); got != tc.want {
-			t.Errorf("方言名不符：got %q, want %q", got, tc.want)
-		}
+		testx.RequireEqual(t, tc.d.Name(), tc.want)
 	}
 }
 
 func TestDialectPlaceholder(t *testing.T) {
 	for _, d := range []Dialect{mysqlDialect{}, sqliteDialect{}, genericDialect{}} {
-		if d.Placeholder(0) != "?" || d.Placeholder(2) != "?" {
-			t.Errorf("%s 占位符应恒为 ?", d.Name())
-		}
+		testx.RequireEqual(t, d.Placeholder(0), "?")
+		testx.RequireEqual(t, d.Placeholder(2), "?")
 	}
-	if (pgDialect{}).Placeholder(0) != "$1" || (pgDialect{}).Placeholder(2) != "$3" {
-		t.Error("PostgreSQL 占位符应按序号生成")
-	}
+	testx.RequireEqual(t, (pgDialect{}).Placeholder(0), "$1")
+	testx.RequireEqual(t, (pgDialect{}).Placeholder(2), "$3")
 }
 
 func TestDialectQuoteIdent(t *testing.T) {
@@ -49,16 +44,14 @@ func TestDialectQuoteIdent(t *testing.T) {
 	}
 	for _, tc := range cases {
 		got, err := tc.d.QuoteIdent(tc.name)
-		if err != nil || got != tc.want {
-			t.Errorf("%s.QuoteIdent(%q) = %q, %v, want %q", tc.d.Name(), tc.name, got, err, tc.want)
-		}
+		testx.RequireNoError(t, err)
+		testx.RequireEqual(t, got, tc.want)
 	}
 	invalid := []string{"", "1abc", "a b", "a;b", "a-b"}
 	for _, name := range invalid {
 		for _, d := range []Dialect{mysqlDialect{}, pgDialect{}} {
-			if _, err := d.QuoteIdent(name); !errx.Is(err, CodeBadArgument) {
-				t.Errorf("%s.QuoteIdent(%q) 应返回 CodeBadArgument：%v", d.Name(), name, err)
-			}
+			_, err := d.QuoteIdent(name)
+			testx.RequireErrCode(t, err, CodeBadArgument)
 		}
 	}
 }
@@ -76,24 +69,17 @@ func TestDialectLimitOffset(t *testing.T) {
 	}
 	for _, tc := range cases {
 		sqlText, args := tc.d.LimitOffset(3, 10, 20)
-		if sqlText != tc.wantSQL || !reflect.DeepEqual(args, tc.wantArgs) {
-			t.Errorf("%s.LimitOffset 结果不符：%q %v", tc.d.Name(), sqlText, args)
-		}
+		testx.RequireEqual(t, sqlText, tc.wantSQL)
+		testx.RequireEqual(t, args, tc.wantArgs)
 	}
 }
 
 func TestDialectFor(t *testing.T) {
-	if dialectFor("sqlite").Name() != "sqlite" {
-		t.Error("已注册方言应命中注册表")
-	}
-	if dialectFor("dbxtest").Name() != "generic" {
-		t.Error("未注册方言应回退 generic")
-	}
+	testx.RequireEqual(t, dialectFor("sqlite").Name(), "sqlite")
+	testx.RequireEqual(t, dialectFor("dbxtest").Name(), "generic")
 }
 
 func TestRegisterDialect(t *testing.T) {
 	RegisterDialect("test-dialect", mysqlDialect{})
-	if dialectFor("test-dialect").Name() != "mysql" {
-		t.Error("RegisterDialect 后应能解析")
-	}
+	testx.RequireEqual(t, dialectFor("test-dialect").Name(), "mysql")
 }
