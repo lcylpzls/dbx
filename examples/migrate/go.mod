@@ -14,7 +14,7 @@ require (
 	github.com/lcylpzls/confx v0.4.4 // indirect
 	github.com/lcylpzls/errx v1.4.0 // indirect
 	github.com/lcylpzls/logx v1.2.5 // indirect
-	github.com/lcylpzls/validx v1.1.3 // indirect
+	github.com/lcylpzls/validx v1.2.2 // indirect
 	github.com/magiconair/properties v1.18.11 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
