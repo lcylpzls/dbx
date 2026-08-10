@@ -2,7 +2,7 @@
 
 基于 `database/sql` 的薄数据访问层:统一、安全、可读、可观测,支持 MySQL、SQLite、PostgreSQL。
 
-[![Go Version](https://img.shields.io/badge/Go-%3E%3D1.26-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 当前状态:**v0.1.0 定版**。规划与实现全部完成,进入发布流程。
