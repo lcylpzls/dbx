@@ -1,5 +1,16 @@
 # 更新日志
 
+## [v0.6.0] - 2026-08-10
+
+### 变更
+
+- 配置校验统一迁移至家族 `validx`：注册 `dbx_config` 全局规则，调用点走 `validx.ValidateField`；
+- errx 错误码保持 dbx 语义，行为不变。
+
+### 质量
+
+- 全部库包语句覆盖率保持 100%；race / vet / staticcheck / fuzz / govulncheck 全绿。
+
 ## [v0.5.0] - 2026-08-10
 
 ### 新增

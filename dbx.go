@@ -7,6 +7,7 @@ import (
 
 	"github.com/lcylpzls/errx"
 	"github.com/lcylpzls/logx"
+	"github.com/lcylpzls/validx"
 )
 
 // Config 是数据库连接与行为配置。
@@ -279,30 +280,40 @@ func driverRegistered(name string) bool {
 	return false
 }
 
-// validateConfig 校验配置参数,负数连接池参数与空驱动/DSN 均视为非法。
+// init 注册配置校验规则到 validx 全局规则表，错误码保持 dbx 语义。
+func init() {
+	_ = validx.RegisterRule("dbx_config", func(value any, param, path string) error {
+		// 内部调用保证 value 为 Config。
+		cfg := value.(Config)
+		if cfg.Driver == "" {
+			return errx.NewCode(CodeBadArgument, "驱动/方言不能为空")
+		}
+		if cfg.DSN == "" {
+			return errx.NewCode(CodeBadArgument, "DSN 不能为空")
+		}
+		if cfg.MaxOpenConns < 0 {
+			return errx.NewCode(CodeBadArgument, "MaxOpenConns 不能为负数")
+		}
+		if cfg.MaxIdleConns < 0 {
+			return errx.NewCode(CodeBadArgument, "MaxIdleConns 不能为负数")
+		}
+		if cfg.ConnMaxLifetime < 0 {
+			return errx.NewCode(CodeBadArgument, "ConnMaxLifetime 不能为负数")
+		}
+		if cfg.ConnMaxIdleTime < 0 {
+			return errx.NewCode(CodeBadArgument, "ConnMaxIdleTime 不能为负数")
+		}
+		if cfg.SlowQueryThreshold < 0 {
+			return errx.NewCode(CodeBadArgument, "SlowQueryThreshold 不能为负数")
+		}
+		return nil
+	})
+}
+
+// validateConfig 校验配置参数，负数连接池参数与空驱动/DSN 均视为非法
+// （统一走 validx 规则）。
 func validateConfig(cfg Config) error {
-	if cfg.Driver == "" {
-		return errx.NewCode(CodeBadArgument, "驱动/方言不能为空")
-	}
-	if cfg.DSN == "" {
-		return errx.NewCode(CodeBadArgument, "DSN 不能为空")
-	}
-	if cfg.MaxOpenConns < 0 {
-		return errx.NewCode(CodeBadArgument, "MaxOpenConns 不能为负数")
-	}
-	if cfg.MaxIdleConns < 0 {
-		return errx.NewCode(CodeBadArgument, "MaxIdleConns 不能为负数")
-	}
-	if cfg.ConnMaxLifetime < 0 {
-		return errx.NewCode(CodeBadArgument, "ConnMaxLifetime 不能为负数")
-	}
-	if cfg.ConnMaxIdleTime < 0 {
-		return errx.NewCode(CodeBadArgument, "ConnMaxIdleTime 不能为负数")
-	}
-	if cfg.SlowQueryThreshold < 0 {
-		return errx.NewCode(CodeBadArgument, "SlowQueryThreshold 不能为负数")
-	}
-	return nil
+	return validx.ValidateField(cfg, "dbx_config")
 }
 
 // open 创建 sql.DB、应用连接池参数并探测连接。
