@@ -8,7 +8,7 @@ require (
 	github.com/lcylpzls/confx v0.3.1
 	github.com/lcylpzls/errx v1.4.0
 	github.com/lcylpzls/logx v1.0.0
-	github.com/lcylpzls/testx v1.2.0
+	github.com/lcylpzls/testx v1.2.1
 	modernc.org/sqlite v1.56.0
 )
 

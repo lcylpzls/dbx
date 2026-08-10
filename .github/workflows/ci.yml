@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        go: ['1.26.x']
+        go: ['1.21.x']
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -85,7 +85,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Test
@@ -100,7 +100,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Fuzz errors (5s)
@@ -121,7 +121,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Build and vet examples
@@ -139,7 +139,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Run benchmarks (baseline only, no gate)
@@ -162,7 +162,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Install apidiff
@@ -214,7 +214,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.21.x'
           check-latest: true
 
       - name: Integration tests (MySQL / PostgreSQL / SQLite)
