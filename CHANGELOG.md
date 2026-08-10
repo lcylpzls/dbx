@@ -1,5 +1,15 @@
 # 更新日志
 
+## [v0.6.1] - 2026-08-10
+
+### 变更
+
+- 扫描时间解析错误统一 errx 化（CodeScanFailed），对外错误带结构化 code/kind，消息保持原语义。
+
+### 质量
+
+- 覆盖率维持基线；race / vet / staticcheck / govulncheck 全绿。
+
 ## [v0.6.0] - 2026-08-10
 
 ### 变更

@@ -3,7 +3,6 @@ package dbx
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -365,7 +364,7 @@ func parseTimeValue(v any) (time.Time, error) {
 	case []byte:
 		return parseTimeString(string(tv))
 	default:
-		return time.Time{}, fmt.Errorf("不支持的时间值 %T", v)
+		return time.Time{}, errx.NewCodef(CodeScanFailed, "不支持的时间值 %T", v)
 	}
 }
 
@@ -382,5 +381,5 @@ func parseTimeString(s string) (time.Time, error) {
 			return tm, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("无法解析时间字符串 %q", s)
+	return time.Time{}, errx.NewCodef(CodeScanFailed, "无法解析时间字符串 %q", s)
 }
