@@ -35,6 +35,8 @@ type Config struct {
 	Metrics Metrics
 	// TraceHook 链路追踪钩子,空表示关闭追踪。
 	TraceHook TraceHook
+	// EventHook 事件钩子,空表示关闭事件（默认）。
+	EventHook EventHook
 }
 
 // Option 是 Config 的修改项,在 Open / OpenConfig 时按顺序应用。
@@ -88,6 +90,11 @@ func WithMetrics(m Metrics) Option {
 // WithTraceHook 设置链路追踪钩子。
 func WithTraceHook(h TraceHook) Option {
 	return func(c *Config) { c.TraceHook = h }
+}
+
+// WithEventHook 设置事件钩子。
+func WithEventHook(h EventHook) Option {
+	return func(c *Config) { c.EventHook = h }
 }
 
 // DB 持有 *sql.DB 与配置,是 dbx 的数据库入口。
@@ -202,14 +209,30 @@ func (db *DB) QueryRow(ctx context.Context, q Query) (*sql.Row, error) {
 
 // startTrace 开始链路追踪（无钩子时 no-op）。
 func (db *DB) startTrace(ctx context.Context, name, op, sqlText string) (context.Context, func(error)) {
-	if db.cfg.TraceHook == nil {
+	if db.cfg.TraceHook == nil && db.cfg.EventHook == nil {
 		return ctx, func(error) {}
 	}
-	return db.cfg.TraceHook.Start(ctx, name,
+	attrs := []TraceAttr{
 		TraceAttr{Key: "db.system", Value: db.dialect.Name()},
 		TraceAttr{Key: "db.operation", Value: op},
 		TraceAttr{Key: "db.statement", Value: sqlText},
-	)
+	}
+	traceEnd := func(error) {}
+	if db.cfg.TraceHook != nil {
+		ctx, traceEnd = db.cfg.TraceHook.Start(ctx, name, attrs...)
+	}
+	system := db.dialect.Name()
+	return ctx, func(err error) {
+		traceEnd(err)
+		if db.cfg.EventHook != nil {
+			db.cfg.EventHook.OnQueryEvent(ctx, QueryEvent{
+				System:    system,
+				Operation: op,
+				Statement: sqlText,
+				Err:       err,
+			})
+		}
+	}
 }
 
 // renderQuery 按数据库方言渲染查询;固定 SQL 原样返回。

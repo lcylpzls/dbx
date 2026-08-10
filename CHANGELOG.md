@@ -1,5 +1,23 @@
 # 更新日志
 
+## [v0.5.0] - 2026-08-10
+
+### 新增
+
+- `EventHook` 查询事件钩子（零依赖可选接口，默认 no-op）：
+  Exec / Query / QueryRow 结束时触发 `QueryEvent`
+  （system / operation / statement / err），由 eventx 等外部适配器接入；
+- `WithEventHook` 选项注入，与 TraceHook 同位置调用。
+
+### 安全
+
+- 升级 golang.org/x/text 至 v0.39.0，修复 GO-2026-5970。
+
+### 质量
+
+- 根包与子包覆盖率保持 100%；race / vet / staticcheck / fuzz /
+  govulncheck 全绿。
+
 ## [v0.4.3] - 2026-08-10
 
 ### 变更
