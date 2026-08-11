@@ -2,7 +2,7 @@
 // 统一连接、事务、扫描、动态查询构造与可观测性,
 // 支持 MySQL、SQLite、PostgreSQL。
 // 对外错误统一使用 errx 结构化错误,错误码为 DBX_*。
-package dbx
+package core
 
 import (
 	"database/sql"

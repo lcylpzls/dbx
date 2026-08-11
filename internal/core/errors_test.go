@@ -1,4 +1,4 @@
-package dbx
+package core
 
 import (
 	"database/sql"
