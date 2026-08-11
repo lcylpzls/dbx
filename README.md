@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> 当前状态:**v0.1.0 定版**。规划与实现全部完成,进入发布流程。
+> 当前状态:**v1.1.1**。完整功能已实现并通过 CI/Release 全绿。
 
 ## 定位
 
@@ -105,12 +105,8 @@ cd examples/basic && go run .
 ## 文档
 
 - [docs/README.md](docs/README.md) — 文档索引与阅读顺序
-- [docs/PRD.md](docs/PRD.md) — 产品需求
 - [docs/architecture.md](docs/architecture.md) — 架构设计
-- [docs/api-design.md](docs/api-design.md) — v0.1.0 API 设计
-- [docs/api-v0.1.0.md](docs/api-v0.1.0.md) — API 基线
-- [docs/iteration-plan.md](docs/iteration-plan.md) — 迭代计划与质量门槛
-- [docs/decisions.md](docs/decisions.md) — 架构决策记录(ADR)
+- [docs/performance.md](docs/performance.md) — 性能基准
 
 ## License
 

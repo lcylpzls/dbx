@@ -1,6 +1,6 @@
 # dbx 架构设计
 
-> 版本:v0.0.0(规划稿) · 状态:评审中
+> 状态:已实现(v1.1.1),本文描述当前架构;公开 API 以 `go doc` 与 README 为准。
 
 ## 1. 总体分层
 
@@ -97,7 +97,7 @@ type Dialect interface {
 ## 9. 错误模型
 
 - 所有对外错误均为 errx 包装,携带 `DBX_*` 错误码;
-- 错误码完整表见 [api-design.md](api-design.md);
+- 错误码统一使用 errx 结构化错误码（`DBX_*` 前缀），清单见 README 与 CHANGELOG；
 - `sql.ErrNoRows` 统一映射为 `DBX_NOT_FOUND`,其余驱动错误保留原始错误链,便于排查。
 
 ## 10. 目标目录结构
