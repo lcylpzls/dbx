@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> 当前状态:**v1.1.1**。完整功能已实现并通过 CI/Release 全绿。
+> 当前状态:**v1.1.2**。完整功能已实现并通过 CI/Release 全绿。
 
 ## 定位
 

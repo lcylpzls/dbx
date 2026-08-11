@@ -10,7 +10,7 @@ require (
 	github.com/lcylpzls/logx v1.3.4
 	github.com/lcylpzls/metricsx v1.5.4
 	github.com/lcylpzls/testx v1.4.5
-	github.com/lcylpzls/tracex v1.0.4
+	github.com/lcylpzls/tracex v1.2.0
 	github.com/lcylpzls/validx v1.2.6
 	modernc.org/sqlite v1.56.0
 )
